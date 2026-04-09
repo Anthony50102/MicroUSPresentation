@@ -1,7 +1,46 @@
 "use client";
 
 import { useSimulation } from "@/lib/simulation/SimulationContext";
-import { motion } from "framer-motion";
+import { motion, useAnimationControls } from "framer-motion";
+import { useEffect, useState, useCallback } from "react";
+
+// ---- Constants ----
+const CONVEYOR_Y = 248;
+const CONVEYOR_H = 12;
+const PICK_X = 90;
+const PLACE_X = 210;
+const ARM_BASE_X = 150;
+const ARM_BASE_Y = 230;
+
+// Arm pose keyframes: [shoulderAngle, elbowAngle, gripOpen]
+// Shoulder rotates the whole upper arm; elbow bends the forearm
+type ArmPose = { shoulder: number; elbow: number; grip: number };
+
+const POSES: Record<string, ArmPose> = {
+  idle:      { shoulder: -30, elbow: -30, grip: 8 },   // upright, open
+  reachDown: { shoulder: -65, elbow: 20,  grip: 8 },   // reaching to pick
+  grab:      { shoulder: -65, elbow: 20,  grip: 2 },   // closed grip
+  liftUp:    { shoulder: -30, elbow: -30, grip: 2 },   // lifting part
+  swingOver: { shoulder: 30,  elbow: -30, grip: 2 },   // swung to place side
+  placeDown: { shoulder: 55,  elbow: 15,  grip: 2 },   // lowering to place
+  release:   { shoulder: 55,  elbow: 15,  grip: 8 },   // opened, released
+  returnUp:  { shoulder: 30,  elbow: -30, grip: 8 },   // swinging back
+};
+
+const CYCLE_SEQUENCE: (keyof typeof POSES)[] = [
+  "idle", "reachDown", "grab", "liftUp", "swingOver", "placeDown", "release", "returnUp",
+];
+
+// Parts on conveyor
+interface ConveyorPart {
+  id: number;
+  x: number;
+  picked: boolean;
+  placed: boolean;
+  color: string;
+}
+
+const PART_COLORS = ["#3B82F6", "#8B5CF6", "#06B6D4", "#10B981", "#F59E0B"];
 
 export default function RoboticArmTwin() {
   const { state } = useSimulation();
@@ -9,147 +48,378 @@ export default function RoboticArmTwin() {
   const joints = [1, 2, 3, 4].map((i) => ({
     temp: state?.metrics[`j${i}Temp`] ?? 50,
     vibration: state?.metrics[`j${i}Vibration`] ?? 1.2,
-    status: state?.statuses[`joint${i}`] ?? "ok",
+    status: (state?.statuses[`joint${i}`] ?? "ok") as string,
   }));
   const accuracy = state?.metrics.placementAccuracy ?? 0.02;
   const cycles = state?.metrics.cycleCount ?? 142380;
-  const isBearingWear = state?.anomalyActive === "bearing-wear";
+  const cycleTime = state?.metrics.cycleTime ?? 1.4;
+  const gripperForce = state?.metrics.gripperForce ?? 12;
+  const anomaly = state?.anomalyActive ?? null;
+
+  // Arm pose state
+  const [poseIdx, setPoseIdx] = useState(0);
+  const [pose, setPose] = useState<ArmPose>(POSES.idle);
+
+  // Conveyor parts
+  const [parts, setParts] = useState<ConveyorPart[]>(() =>
+    Array.from({ length: 4 }, (_, i) => ({
+      id: i,
+      x: -20 - i * 60,
+      picked: false,
+      placed: false,
+      color: PART_COLORS[i % PART_COLORS.length],
+    }))
+  );
+  const [nextPartId, setNextPartId] = useState(4);
+  const [carriedPartColor, setCarriedPartColor] = useState<string | null>(null);
+
+  // Placed parts on the output side
+  const [placedParts, setPlacedParts] = useState<{ id: number; x: number; color: string; offset: number }[]>([]);
+
+  // Cycle speed based on simulation cycleTime (slower when bearing-wear)
+  const stepDuration = anomaly === "bearing-wear" ? 500 : 320;
+
+  // Advance arm cycle
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPoseIdx((prev) => {
+        const next = (prev + 1) % CYCLE_SEQUENCE.length;
+        const poseName = CYCLE_SEQUENCE[next];
+        const nextPose = { ...POSES[poseName] };
+
+        // Anomaly: calibration-drift adds random offset to place position
+        if (anomaly === "calibration-drift" && (poseName === "placeDown" || poseName === "release")) {
+          nextPose.shoulder += (Math.random() - 0.5) * 15;
+          nextPose.elbow += (Math.random() - 0.5) * 10;
+        }
+
+        // Anomaly: gripper-slip — grip doesn't close fully
+        if (anomaly === "gripper-slip" && poseName === "grab") {
+          nextPose.grip = 5; // doesn't close all the way
+        }
+
+        setPose(nextPose);
+
+        // Handle part picking
+        if (poseName === "grab") {
+          setParts((prev) => {
+            const pickable = prev.find((p) => !p.picked && !p.placed && p.x >= PICK_X - 15 && p.x <= PICK_X + 15);
+            if (pickable) {
+              setCarriedPartColor(pickable.color);
+              // Gripper-slip: sometimes fails to pick
+              if (anomaly === "gripper-slip" && Math.random() < 0.4) {
+                setCarriedPartColor(null);
+                return prev;
+              }
+              return prev.map((p) => (p.id === pickable.id ? { ...p, picked: true } : p));
+            }
+            return prev;
+          });
+        }
+
+        // Handle part placing
+        if (poseName === "release" && carriedPartColor) {
+          const placementOffset = anomaly === "calibration-drift" ? (Math.random() - 0.5) * 16 : 0;
+          setPlacedParts((prev) => {
+            const newParts = [...prev, { id: Date.now(), x: PLACE_X, color: carriedPartColor!, offset: placementOffset }];
+            return newParts.slice(-6); // keep last 6
+          });
+          setCarriedPartColor(null);
+        }
+
+        return next;
+      });
+    }, stepDuration);
+    return () => clearInterval(interval);
+  }, [anomaly, stepDuration, carriedPartColor]);
+
+  // Advance conveyor
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setParts((prev) => {
+        let updated = prev.map((p) =>
+          p.picked ? p : { ...p, x: p.x + 1.5 }
+        );
+        // Remove parts past the right edge
+        updated = updated.filter((p) => p.x < 180 || p.picked);
+        // Spawn new parts from the left
+        if (updated.filter((p) => !p.picked).every((p) => p.x > 0)) {
+          setNextPartId((id) => {
+            updated.push({
+              id: id,
+              x: -25,
+              picked: false,
+              placed: false,
+              color: PART_COLORS[id % PART_COLORS.length],
+            });
+            return id + 1;
+          });
+        }
+        return updated;
+      });
+    }, 50);
+    return () => clearInterval(interval);
+  }, []);
 
   const jointColor = (status: string) =>
     status === "error" ? "#DC2626" : status === "warn" ? "#EA580C" : "#16A34A";
-  const jointIcon = (status: string) =>
-    status === "error" ? "❌" : status === "warn" ? "⚠️" : "✅";
 
-  // Vibration shake amount based on joint status
-  const shakeAmount = (status: string) =>
-    status === "error" ? 3 : status === "warn" ? 1.5 : 0;
-  const shakeDuration = (status: string) =>
-    status === "error" ? 0.08 : 0.12;
+  // Bearing-wear shake on the whole arm group
+  const armShake = anomaly === "bearing-wear" ? {
+    x: [0, -1.5, 1.5, -1, 1, 0],
+    y: [0, 1, -1, 0.5, -0.5, 0],
+  } : { x: 0, y: 0 };
+
+  // Compute arm segment endpoints from pose angles
+  const UPPER_LEN = 55;
+  const LOWER_LEN = 50;
+  const shoulderRad = (pose.shoulder * Math.PI) / 180;
+  const elbowWorldAngle = pose.shoulder + pose.elbow;
+  const elbowRad = (elbowWorldAngle * Math.PI) / 180;
+
+  const elbowX = ARM_BASE_X + Math.sin(shoulderRad) * UPPER_LEN;
+  const elbowY = ARM_BASE_Y - Math.cos(shoulderRad) * UPPER_LEN;
+  const wristX = elbowX + Math.sin(elbowRad) * LOWER_LEN;
+  const wristY = elbowY - Math.cos(elbowRad) * LOWER_LEN;
+
+  // Gripper prongs
+  const gripAngle = elbowWorldAngle;
+  const gripRad = (gripAngle * Math.PI) / 180;
+  const gripPerp = gripRad + Math.PI / 2;
+  const prongLen = 14;
+  const leftProngX = wristX + Math.cos(gripPerp) * pose.grip + Math.sin(gripRad) * prongLen;
+  const leftProngY = wristY + Math.sin(gripPerp) * pose.grip - Math.cos(gripRad) * prongLen;
+  const rightProngX = wristX - Math.cos(gripPerp) * pose.grip + Math.sin(gripRad) * prongLen;
+  const rightProngY = wristY - Math.sin(gripPerp) * pose.grip - Math.cos(gripRad) * prongLen;
 
   return (
-    <div className="h-full flex flex-col items-center justify-center gap-4">
-      <div className="relative w-full max-w-md aspect-square flex items-center justify-center">
-        <svg viewBox="0 0 300 300" className="w-full h-full max-w-xs">
-          {/* Base */}
-          <rect x="110" y="260" width="80" height="20" rx="4" fill="#475569" />
-          <rect x="130" y="240" width="40" height="25" rx="4" fill="#64748B" />
+    <div className="h-full flex flex-col items-center justify-center gap-2">
+      <div className="relative w-full max-w-lg aspect-[5/4] flex items-center justify-center">
+        <svg viewBox="0 0 300 290" className="w-full h-full">
+          {/* Background grid lines for industrial feel */}
+          {Array.from({ length: 7 }, (_, i) => (
+            <line key={`g${i}`} x1={0} y1={i * 45} x2={300} y2={i * 45} stroke="#94A3B820" strokeWidth={0.5} />
+          ))}
 
-          {/* Segment 1 (lower arm) */}
-          <rect x="140" y="170" width="20" height="75" rx="6" fill="#2563EB" opacity="0.8" />
+          {/* === CONVEYOR BELT === */}
+          {/* Belt surface */}
+          <rect x={0} y={CONVEYOR_Y} width={170} height={CONVEYOR_H} rx={2} fill="#334155" />
+          {/* Belt rollers */}
+          {Array.from({ length: 9 }, (_, i) => (
+            <motion.line
+              key={`r${i}`}
+              x1={10 + i * 19} y1={CONVEYOR_Y + 1}
+              x2={10 + i * 19} y2={CONVEYOR_Y + CONVEYOR_H - 1}
+              stroke="#475569"
+              strokeWidth={2}
+              animate={{ x1: [0, 19], x2: [0, 19] }}
+              transition={{ repeat: Infinity, duration: 1.2, ease: "linear" }}
+            />
+          ))}
+          {/* Belt label */}
+          <text x={5} y={CONVEYOR_Y - 4} fontSize="6" fill="#64748B" fontFamily="monospace">INPUT CONVEYOR</text>
 
-          {/* Joint 1 — animated */}
-          <motion.circle
-            cx={150} cy={240} r={8}
-            fill={jointColor(joints[0].status)}
-            stroke="#FFF" strokeWidth={2}
-            animate={shakeAmount(joints[0].status) > 0
-              ? { x: [-shakeAmount(joints[0].status), shakeAmount(joints[0].status), -shakeAmount(joints[0].status)] }
-              : { x: 0 }
-            }
-            transition={shakeAmount(joints[0].status) > 0
-              ? { repeat: Infinity, duration: shakeDuration(joints[0].status), ease: "easeInOut" }
-              : { duration: 0.3 }
-            }
-          />
+          {/* === OUTPUT ZONE === */}
+          <rect x={195} y={CONVEYOR_Y} width={95} height={CONVEYOR_H} rx={2} fill="#1E3A2F" stroke="#16A34A40" strokeWidth={1} />
+          <text x={200} y={CONVEYOR_Y - 4} fontSize="6" fill="#16A34A80" fontFamily="monospace">OUTPUT</text>
 
-          {/* Joint 2 — animated */}
-          <motion.circle
-            cx={150} cy={170} r={10}
-            fill={jointColor(joints[1].status)}
-            stroke="#FFF" strokeWidth={2}
-            animate={shakeAmount(joints[1].status) > 0
-              ? { y: [-shakeAmount(joints[1].status), shakeAmount(joints[1].status), -shakeAmount(joints[1].status)] }
-              : { y: 0 }
-            }
-            transition={shakeAmount(joints[1].status) > 0
-              ? { repeat: Infinity, duration: shakeDuration(joints[1].status), ease: "easeInOut" }
-              : { duration: 0.3 }
-            }
-          />
-          <text x="170" y="174" fontSize="9" fill="#94A3B8" fontFamily="monospace">
-            J2 {jointIcon(joints[1].status)}
+          {/* Placed parts in output zone */}
+          {placedParts.map((p, i) => (
+            <motion.rect
+              key={p.id}
+              x={205 + i * 14 + p.offset}
+              y={CONVEYOR_Y + 2}
+              width={10}
+              height={8}
+              rx={1.5}
+              fill={p.color}
+              opacity={0.9}
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 0.9 }}
+              transition={{ duration: 0.2 }}
+            />
+          ))}
+
+          {/* === CONVEYOR PARTS (incoming) === */}
+          {parts.filter((p) => !p.picked).map((p) => (
+            <rect
+              key={p.id}
+              x={p.x}
+              y={CONVEYOR_Y + 2}
+              width={14}
+              height={8}
+              rx={2}
+              fill={p.color}
+              opacity={0.9}
+            />
+          ))}
+
+          {/* Pick zone indicator */}
+          <rect x={PICK_X - 12} y={CONVEYOR_Y - 2} width={24} height={CONVEYOR_H + 4} rx={2} fill="none" stroke="#3B82F640" strokeWidth={1} strokeDasharray="3 2" />
+          <text x={PICK_X - 8} y={CONVEYOR_Y + CONVEYOR_H + 10} fontSize="5" fill="#3B82F680" fontFamily="monospace">PICK</text>
+
+          {/* Place zone indicator */}
+          <rect x={PLACE_X - 12} y={CONVEYOR_Y - 2} width={24} height={CONVEYOR_H + 4} rx={2} fill="none" stroke="#16A34A40" strokeWidth={1} strokeDasharray="3 2" />
+          <text x={PLACE_X - 10} y={CONVEYOR_Y + CONVEYOR_H + 10} fontSize="5" fill="#16A34A80" fontFamily="monospace">PLACE</text>
+
+          {/* === ARM BASE === */}
+          <rect x={ARM_BASE_X - 18} y={ARM_BASE_Y} width={36} height={14} rx={3} fill="#475569" />
+          <rect x={ARM_BASE_X - 10} y={ARM_BASE_Y + 10} width={20} height={8} rx={2} fill="#334155" />
+
+          {/* === ROBOTIC ARM (animated group) === */}
+          <motion.g
+            animate={armShake}
+            transition={anomaly === "bearing-wear" ? { repeat: Infinity, duration: 0.15, ease: "easeInOut" } : { duration: 0.3 }}
+          >
+            {/* Upper arm segment */}
+            <motion.line
+              x1={ARM_BASE_X} y1={ARM_BASE_Y}
+              x2={elbowX} y2={elbowY}
+              stroke="#2563EB"
+              strokeWidth={8}
+              strokeLinecap="round"
+              initial={false}
+              animate={{ x2: elbowX, y2: elbowY }}
+              transition={{ duration: stepDuration / 1000 * 0.8, ease: "easeInOut" }}
+            />
+
+            {/* Lower arm segment */}
+            <motion.line
+              x1={elbowX} y1={elbowY}
+              x2={wristX} y2={wristY}
+              stroke="#7C3AED"
+              strokeWidth={6}
+              strokeLinecap="round"
+              initial={false}
+              animate={{ x1: elbowX, y1: elbowY, x2: wristX, y2: wristY }}
+              transition={{ duration: stepDuration / 1000 * 0.8, ease: "easeInOut" }}
+            />
+
+            {/* Shoulder joint (base) */}
+            <motion.circle
+              cx={ARM_BASE_X} cy={ARM_BASE_Y} r={7}
+              fill={jointColor(joints[0].status)}
+              stroke="#FFF" strokeWidth={1.5}
+            />
+
+            {/* Elbow joint */}
+            <motion.circle
+              cx={elbowX} cy={elbowY} r={6}
+              fill={jointColor(joints[1].status)}
+              stroke="#FFF" strokeWidth={1.5}
+              initial={false}
+              animate={{ cx: elbowX, cy: elbowY }}
+              transition={{ duration: stepDuration / 1000 * 0.8, ease: "easeInOut" }}
+            />
+
+            {/* Wrist joint */}
+            <motion.circle
+              cx={wristX} cy={wristY} r={5}
+              fill={jointColor(joints[2].status)}
+              stroke="#FFF" strokeWidth={1.5}
+              initial={false}
+              animate={{ cx: wristX, cy: wristY }}
+              transition={{ duration: stepDuration / 1000 * 0.8, ease: "easeInOut" }}
+            />
+
+            {/* Gripper prongs */}
+            <motion.line
+              x1={wristX} y1={wristY}
+              x2={leftProngX} y2={leftProngY}
+              stroke="#94A3B8"
+              strokeWidth={3}
+              strokeLinecap="round"
+              initial={false}
+              animate={{ x1: wristX, y1: wristY, x2: leftProngX, y2: leftProngY }}
+              transition={{ duration: stepDuration / 1000 * 0.6, ease: "easeInOut" }}
+            />
+            <motion.line
+              x1={wristX} y1={wristY}
+              x2={rightProngX} y2={rightProngY}
+              stroke="#94A3B8"
+              strokeWidth={3}
+              strokeLinecap="round"
+              initial={false}
+              animate={{ x1: wristX, y1: wristY, x2: rightProngX, y2: rightProngY }}
+              transition={{ duration: stepDuration / 1000 * 0.6, ease: "easeInOut" }}
+            />
+
+            {/* Gripper joint */}
+            <motion.circle
+              cx={wristX} cy={wristY} r={3.5}
+              fill={jointColor(joints[3].status)}
+              stroke="#FFF" strokeWidth={1}
+              initial={false}
+              animate={{ cx: wristX, cy: wristY }}
+              transition={{ duration: stepDuration / 1000 * 0.8, ease: "easeInOut" }}
+            />
+
+            {/* Carried part (moves with wrist) */}
+            {carriedPartColor && (
+              <motion.rect
+                x={wristX - 5}
+                y={wristY + 8}
+                width={10}
+                height={7}
+                rx={1.5}
+                fill={carriedPartColor}
+                opacity={0.95}
+                initial={false}
+                animate={{ x: wristX - 5, y: wristY + 8 }}
+                transition={{ duration: stepDuration / 1000 * 0.8, ease: "easeInOut" }}
+              />
+            )}
+          </motion.g>
+
+          {/* === HUD OVERLAY === */}
+          {/* Top-left: title + stats */}
+          <text x="8" y="14" fontSize="8" fill="#94A3B8" fontFamily="monospace" fontWeight="bold">
+            UR10e PICK &amp; PLACE
+          </text>
+          <text x="8" y="26" fontSize="6.5" fill="#64748B" fontFamily="monospace">
+            Cycles: {cycles.toLocaleString()} | ±{accuracy}mm | {cycleTime}s/cycle
+          </text>
+          <text x="8" y="37" fontSize="6.5" fill="#64748B" fontFamily="monospace">
+            Gripper: {gripperForce}N
           </text>
 
-          {/* Segment 2 (upper arm) — subtle idle oscillation */}
-          <motion.rect
-            x={140} y={100} width={20} height={75} rx={6}
-            fill="#7C3AED" opacity={0.8}
-            animate={{ rotate: [-15.5, -14.5, -15.5] }}
-            style={{ originX: "150px", originY: "140px" }}
-            transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-          />
+          {/* Joint status row */}
+          {joints.map((j, i) => (
+            <g key={i}>
+              <circle cx={12 + i * 32} cy={52} r={3.5} fill={jointColor(j.status)} />
+              <text x={18 + i * 32} y={54} fontSize="6" fill="#94A3B8" fontFamily="monospace">
+                J{i + 1}
+              </text>
+            </g>
+          ))}
 
-          {/* Joint 3 — animated, pulse when bearing-wear */}
-          <motion.circle
-            cx={140} cy={105}
-            r={10}
-            fill={jointColor(joints[2].status)}
-            stroke="#FFF" strokeWidth={2}
-            animate={
-              isBearingWear
-                ? { r: [10, 14, 10], x: [-shakeAmount(joints[2].status), shakeAmount(joints[2].status), -shakeAmount(joints[2].status)] }
-                : shakeAmount(joints[2].status) > 0
-                  ? { x: [-shakeAmount(joints[2].status), shakeAmount(joints[2].status), -shakeAmount(joints[2].status)] }
-                  : { x: 0 }
-            }
-            transition={
-              isBearingWear
-                ? { repeat: Infinity, duration: 0.8, ease: "easeInOut" }
-                : shakeAmount(joints[2].status) > 0
-                  ? { repeat: Infinity, duration: shakeDuration(joints[2].status), ease: "easeInOut" }
-                  : { duration: 0.3 }
-            }
-          />
-          <text x="155" y="109" fontSize="9" fill={jointColor(joints[2].status)} fontFamily="monospace" fontWeight="bold">
-            J3 {jointIcon(joints[2].status)}
-          </text>
-
-          {/* Joint 4 / Gripper */}
-          <rect x="120" y="70" width="12" height="30" rx="3" fill="#64748B" transform="rotate(-20, 126, 85)" />
-          <rect x="140" y="70" width="12" height="30" rx="3" fill="#64748B" transform="rotate(5, 146, 85)" />
-          <motion.circle
-            cx={130} cy={70} r={6}
-            fill={jointColor(joints[3].status)}
-            stroke="#FFF" strokeWidth={1.5}
-            animate={shakeAmount(joints[3].status) > 0
-              ? { x: [-shakeAmount(joints[3].status), shakeAmount(joints[3].status), -shakeAmount(joints[3].status)], y: [-shakeAmount(joints[3].status) * 0.5, shakeAmount(joints[3].status) * 0.5, -shakeAmount(joints[3].status) * 0.5] }
-              : { x: 0, y: 0 }
-            }
-            transition={shakeAmount(joints[3].status) > 0
-              ? { repeat: Infinity, duration: shakeDuration(joints[3].status), ease: "easeInOut" }
-              : { duration: 0.3 }
-            }
-          />
-
-          {/* Legend */}
-          <text x="20" y="30" fontSize="10" fill="#94A3B8" fontFamily="monospace">
-            PICK &amp; PLACE ARM
-          </text>
-          <text x="20" y="48" fontSize="8" fill="#94A3B8" fontFamily="monospace">
-            Cycles: {cycles.toLocaleString()}
-          </text>
-          <text x="20" y="62" fontSize="8" fill="#94A3B8" fontFamily="monospace">
-            Accuracy: ±{accuracy}mm
-          </text>
-
-          {state?.anomalyActive && (
-            <text x="20" y="80" fontSize="9" fill="#EA580C" fontFamily="monospace" fontWeight="bold">
-              ⚠ {state.anomalyActive}
-            </text>
+          {/* Anomaly banner */}
+          {anomaly && (
+            <motion.g
+              animate={{ opacity: [1, 0.6, 1] }}
+              transition={{ repeat: Infinity, duration: 1.2 }}
+            >
+              <rect x={170} y={6} width={124} height={18} rx={4} fill="#DC262620" stroke="#DC262660" strokeWidth={0.5} />
+              <text x={180} y={18} fontSize="7" fill="#DC2626" fontFamily="monospace" fontWeight="bold">
+                ⚠ {anomaly.toUpperCase()}
+              </text>
+            </motion.g>
           )}
 
-          {/* Legend icons */}
-          <circle cx="220" cy="25" r="4" fill="#16A34A" />
-          <text x="228" y="28" fontSize="8" fill="#94A3B8" fontFamily="monospace">Normal</text>
-          <circle cx="220" cy="40" r="4" fill="#EA580C" />
-          <text x="228" y="43" fontSize="8" fill="#EA580C" fontFamily="monospace">Warning</text>
-          <circle cx="220" cy="55" r="4" fill="#DC2626" />
-          <text x="228" y="58" fontSize="8" fill="#DC2626" fontFamily="monospace">Error</text>
+          {/* Legend */}
+          <g>
+            <circle cx={230} cy={42} r={3} fill="#16A34A" />
+            <text x={236} y={44} fontSize="5.5" fill="#94A3B8" fontFamily="monospace">OK</text>
+            <circle cx={255} cy={42} r={3} fill="#EA580C" />
+            <text x={261} y={44} fontSize="5.5" fill="#EA580C" fontFamily="monospace">WARN</text>
+            <circle cx={284} cy={42} r={3} fill="#DC2626" />
+            <text x={290} y={44} fontSize="5.5" fill="#DC2626" fontFamily="monospace">ERR</text>
+          </g>
         </svg>
       </div>
 
       <p className="text-xs text-muted text-center max-w-sm">
-        Try: &quot;inject bearing-wear&quot;, &quot;inject calibration-drift&quot;, or &quot;show status&quot;.
+        Pick &amp; place assembly line. Try: &quot;inject bearing-wear&quot;, &quot;inject calibration-drift&quot;, &quot;inject gripper-slip&quot;.
       </p>
     </div>
   );
