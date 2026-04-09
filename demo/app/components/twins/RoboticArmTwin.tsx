@@ -271,7 +271,6 @@ export default function RoboticArmTwin() {
   const rightProngY = wristY - Math.sin(gripPerp) * pose.grip - Math.cos(gripRad) * prongLen;
 
   const transitionDur = stepDuration / 1000 * 0.8;
-  const gripDur = stepDuration / 1000 * 0.6;
 
   return (
     <div className="h-full flex flex-col items-center justify-center gap-2">
@@ -437,7 +436,7 @@ export default function RoboticArmTwin() {
               strokeLinecap="round"
               initial={false}
               animate={{ x1: wristX, y1: wristY, x2: leftProngX, y2: leftProngY }}
-              transition={{ duration: gripDur, ease: "easeInOut" }}
+              transition={{ duration: transitionDur, ease: "easeInOut" }}
             />
             <motion.line
               x1={wristX} y1={wristY}
@@ -447,7 +446,7 @@ export default function RoboticArmTwin() {
               strokeLinecap="round"
               initial={false}
               animate={{ x1: wristX, y1: wristY, x2: rightProngX, y2: rightProngY }}
-              transition={{ duration: gripDur, ease: "easeInOut" }}
+              transition={{ duration: transitionDur, ease: "easeInOut" }}
             />
 
             {/* Gripper joint */}
