@@ -2,7 +2,7 @@
 
 import { useSimulation } from "@/lib/simulation/SimulationContext";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // ---- Constants ----
 const CONVEYOR_Y = 248;
@@ -11,20 +11,32 @@ const PICK_X = 90;
 const PLACE_X = 210;
 const ARM_BASE_X = 150;
 const ARM_BASE_Y = 230;
+const UPPER_LEN = 55;
+const LOWER_LEN = 50;
 
-// Arm pose keyframes: [shoulderAngle, elbowAngle, gripOpen]
-// Shoulder rotates the whole upper arm; elbow bends the forearm
+// Bin dimensions (open-top container)
+const BIN_LEFT = PLACE_X - 20;
+const BIN_RIGHT = PLACE_X + 20;
+const BIN_TOP = CONVEYOR_Y - 28;
+const BIN_BOTTOM = CONVEYOR_Y + 12;
+
+// Conveyor extends just past the pick zone
+const CONVEYOR_W = PICK_X + 20;
+
+// Arm pose keyframes: shoulder rotates upper arm from base; elbow is additive
 type ArmPose = { shoulder: number; elbow: number; grip: number };
 
+// IK-solved poses — computed via 2-link IK treating upper (55) + lower+prong (50+14=64)
+// as effective segments. Prong tips reach (PICK_X, ~254) and (PLACE_X, ~234).
 const POSES: Record<string, ArmPose> = {
-  idle:      { shoulder: -30, elbow: -30, grip: 8 },   // upright, open
-  reachDown: { shoulder: -65, elbow: 20,  grip: 8 },   // reaching to pick
-  grab:      { shoulder: -65, elbow: 20,  grip: 2 },   // closed grip
-  liftUp:    { shoulder: -30, elbow: -30, grip: 2 },   // lifting part
-  swingOver: { shoulder: 30,  elbow: -30, grip: 2 },   // swung to place side
-  placeDown: { shoulder: 55,  elbow: 15,  grip: 2 },   // lowering to place
-  release:   { shoulder: 55,  elbow: 15,  grip: 8 },   // opened, released
-  returnUp:  { shoulder: 30,  elbow: -30, grip: 8 },   // swinging back
+  idle:      { shoulder: -30,  elbow: -30,  grip: 8 },
+  reachDown: { shoulder: -48,  elbow: -115, grip: 8 },
+  grab:      { shoulder: -48,  elbow: -115, grip: 2 },
+  liftUp:    { shoulder: -30,  elbow: -40,  grip: 2 },
+  swingOver: { shoulder: 20,   elbow: -40,  grip: 2 },
+  placeDown: { shoulder: 26,   elbow: 120,  grip: 2 },
+  release:   { shoulder: 26,   elbow: 120,  grip: 8 },
+  returnUp:  { shoulder: 0,    elbow: -30,  grip: 8 },
 };
 
 const CYCLE_SEQUENCE: (keyof typeof POSES)[] = [
@@ -37,6 +49,14 @@ interface ConveyorPart {
   x: number;
   picked: boolean;
   placed: boolean;
+  color: string;
+}
+
+interface FallingPart {
+  id: number;
+  x: number;
+  y: number;
+  vy: number;
   color: string;
 }
 
@@ -71,6 +91,15 @@ export default function RoboticArmTwin() {
   // Bin parts — fade out after landing
   const [binParts, setBinParts] = useState<{ id: number; color: string; offset: number; age: number }[]>([]);
 
+  // Falling parts — missed placements that drop with gravity
+  const [fallingParts, setFallingParts] = useState<FallingPart[]>([]);
+
+  // Refs to avoid stale closures in interval callbacks
+  const partsRef = useRef(parts);
+  partsRef.current = parts;
+  const carriedRef = useRef(carriedPartColor);
+  carriedRef.current = carriedPartColor;
+
   // Cycle speed based on simulation cycleTime (slower when bearing-wear)
   const stepDuration = anomaly === "bearing-wear" ? 500 : 320;
 
@@ -80,6 +109,15 @@ export default function RoboticArmTwin() {
       setPoseIdx((prev) => {
         const next = (prev + 1) % CYCLE_SEQUENCE.length;
         const poseName = CYCLE_SEQUENCE[next];
+
+        // Wait at idle — don't reach down until a part is near the pick zone
+        if (poseName === "reachDown") {
+          const nearPick = partsRef.current.some(
+            (p) => !p.picked && !p.placed && p.x >= PICK_X - 25
+          );
+          if (!nearPick) return prev;
+        }
+
         const nextPose = { ...POSES[poseName] };
 
         // Anomaly: calibration-drift adds random offset to place position
@@ -97,28 +135,47 @@ export default function RoboticArmTwin() {
 
         // Handle part picking
         if (poseName === "grab") {
-          setParts((prev) => {
-            const pickable = prev.find((p) => !p.picked && !p.placed && p.x >= PICK_X - 15 && p.x <= PICK_X + 15);
+          setParts((prevParts) => {
+            const pickable = prevParts.find((p) => !p.picked && !p.placed && p.x >= PICK_X - 15 && p.x <= PICK_X + 15);
             if (pickable) {
-              setCarriedPartColor(pickable.color);
               // Gripper-slip: sometimes fails to pick
               if (anomaly === "gripper-slip" && Math.random() < 0.4) {
                 setCarriedPartColor(null);
-                return prev;
+                return prevParts;
               }
-              return prev.map((p) => (p.id === pickable.id ? { ...p, picked: true } : p));
+              setCarriedPartColor(pickable.color);
+              return prevParts.map((p) => (p.id === pickable.id ? { ...p, picked: true } : p));
             }
-            return prev;
+            return prevParts;
           });
         }
 
-        // Handle part placing — drop into bin
-        if (poseName === "release" && carriedPartColor) {
-          const placementOffset = anomaly === "calibration-drift" ? (Math.random() - 0.5) * 10 : 0;
-          setBinParts((prev) => {
-            const newParts = [...prev, { id: Date.now(), color: carriedPartColor!, offset: placementOffset, age: 0 }];
-            return newParts.slice(-5);
-          });
+        // Handle part placing — drop into bin or miss
+        if (poseName === "release" && carriedRef.current) {
+          const isMiss = anomaly === "calibration-drift" || Math.random() < 0.1;
+
+          if (isMiss) {
+            // Compute gripper tip position from the (possibly drifted) release pose
+            const sRad = (nextPose.shoulder * Math.PI) / 180;
+            const eWorldRad = ((nextPose.shoulder + nextPose.elbow) * Math.PI) / 180;
+            const eX = ARM_BASE_X + Math.sin(sRad) * UPPER_LEN;
+            const eY = ARM_BASE_Y - Math.cos(sRad) * UPPER_LEN;
+            const wX = eX + Math.sin(eWorldRad) * LOWER_LEN;
+            const wY = eY - Math.cos(eWorldRad) * LOWER_LEN;
+            const tipX = wX + Math.sin(eWorldRad) * 14;
+            const tipY = wY - Math.cos(eWorldRad) * 14;
+
+            setFallingParts((fp) => [
+              ...fp,
+              { id: Date.now(), x: tipX - 5, y: tipY - 3.5, vy: 0, color: carriedRef.current! },
+            ]);
+          } else {
+            const placementOffset = anomaly === "calibration-drift" ? (Math.random() - 0.5) * 10 : 0;
+            setBinParts((prevBin) => {
+              const newParts = [...prevBin, { id: Date.now(), color: carriedRef.current!, offset: placementOffset, age: 0 }];
+              return newParts.slice(-5);
+            });
+          }
           setCarriedPartColor(null);
         }
 
@@ -126,7 +183,7 @@ export default function RoboticArmTwin() {
       });
     }, stepDuration);
     return () => clearInterval(interval);
-  }, [anomaly, stepDuration, carriedPartColor]);
+  }, [anomaly, stepDuration]);
 
   // Advance conveyor — slower, less frequent parts
   useEffect(() => {
@@ -170,6 +227,19 @@ export default function RoboticArmTwin() {
     return () => clearInterval(interval);
   }, []);
 
+  // Gravity tick for falling parts
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFallingParts((prev) => {
+        if (prev.length === 0) return prev;
+        return prev
+          .map((p) => ({ ...p, vy: p.vy + 0.5, y: p.y + p.vy }))
+          .filter((p) => p.y < 300);
+      });
+    }, 30);
+    return () => clearInterval(interval);
+  }, []);
+
   const jointColor = (status: string) =>
     status === "error" ? "#DC2626" : status === "warn" ? "#EA580C" : "#16A34A";
 
@@ -180,8 +250,6 @@ export default function RoboticArmTwin() {
   } : { x: 0, y: 0 };
 
   // Compute arm segment endpoints from pose angles
-  const UPPER_LEN = 55;
-  const LOWER_LEN = 50;
   const shoulderRad = (pose.shoulder * Math.PI) / 180;
   const elbowWorldAngle = pose.shoulder + pose.elbow;
   const elbowRad = (elbowWorldAngle * Math.PI) / 180;
@@ -201,6 +269,9 @@ export default function RoboticArmTwin() {
   const rightProngX = wristX - Math.cos(gripPerp) * pose.grip + Math.sin(gripRad) * prongLen;
   const rightProngY = wristY - Math.sin(gripPerp) * pose.grip - Math.cos(gripRad) * prongLen;
 
+  const transitionDur = stepDuration / 1000 * 0.8;
+  const gripDur = stepDuration / 1000 * 0.6;
+
   return (
     <div className="h-full flex flex-col items-center justify-center gap-2">
       <div className="relative w-full max-w-lg aspect-[5/4] flex items-center justify-center">
@@ -210,11 +281,18 @@ export default function RoboticArmTwin() {
             <line key={`g${i}`} x1={0} y1={i * 45} x2={300} y2={i * 45} stroke="#94A3B820" strokeWidth={0.5} />
           ))}
 
+          {/* Clip path for conveyor parts */}
+          <defs>
+            <clipPath id="conveyor-clip">
+              <rect x={0} y={CONVEYOR_Y - 1} width={CONVEYOR_W} height={CONVEYOR_H + 6} />
+            </clipPath>
+          </defs>
+
           {/* === CONVEYOR BELT === */}
           {/* Belt surface */}
-          <rect x={0} y={CONVEYOR_Y} width={170} height={CONVEYOR_H} rx={2} fill="#334155" />
+          <rect x={0} y={CONVEYOR_Y} width={CONVEYOR_W} height={CONVEYOR_H} rx={2} fill="#334155" />
           {/* Belt rollers */}
-          {Array.from({ length: 9 }, (_, i) => (
+          {Array.from({ length: 6 }, (_, i) => (
             <motion.line
               key={`r${i}`}
               x1={10 + i * 19} y1={CONVEYOR_Y + 1}
@@ -228,18 +306,23 @@ export default function RoboticArmTwin() {
           {/* Belt label */}
           <text x={5} y={CONVEYOR_Y - 4} fontSize="6" fill="#64748B" fontFamily="monospace">INPUT CONVEYOR</text>
 
-          {/* === OUTPUT BIN === */}
-          {/* Bin container */}
-          <rect x={PLACE_X - 14} y={CONVEYOR_Y - 20} width={28} height={32} rx={2} fill="none" stroke="#16A34A60" strokeWidth={1.5} />
-          <rect x={PLACE_X - 13} y={CONVEYOR_Y + 10} width={26} height={2} rx={1} fill="#16A34A40" />
-          <text x={PLACE_X - 10} y={CONVEYOR_Y + CONVEYOR_H + 10} fontSize="5" fill="#16A34A80" fontFamily="monospace">BIN</text>
+          {/* === OUTPUT BIN (open-top) === */}
+          <path
+            d={`M ${BIN_LEFT},${BIN_TOP} V ${BIN_BOTTOM} H ${BIN_RIGHT} V ${BIN_TOP}`}
+            fill="none"
+            stroke="#16A34A60"
+            strokeWidth={1.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <text x={PLACE_X - 6} y={BIN_BOTTOM + 10} fontSize="5" fill="#16A34A80" fontFamily="monospace">BIN</text>
 
           {/* Parts in bin — stack up and fade out */}
           {binParts.map((p, i) => (
             <motion.rect
               key={p.id}
               x={PLACE_X - 5 + p.offset}
-              y={CONVEYOR_Y + 4 - i * 5}
+              y={BIN_BOTTOM - 6 - i * 5}
               width={10}
               height={4}
               rx={1}
@@ -250,17 +333,33 @@ export default function RoboticArmTwin() {
             />
           ))}
 
-          {/* === CONVEYOR PARTS (incoming) === */}
-          {parts.filter((p) => !p.picked).map((p) => (
+          {/* === CONVEYOR PARTS (clipped to belt bounds) === */}
+          <g clipPath="url(#conveyor-clip)">
+            {parts.filter((p) => !p.picked).map((p) => (
+              <rect
+                key={p.id}
+                x={p.x}
+                y={CONVEYOR_Y + 2}
+                width={14}
+                height={8}
+                rx={2}
+                fill={p.color}
+                opacity={0.9}
+              />
+            ))}
+          </g>
+
+          {/* === FALLING PARTS (missed placements) === */}
+          {fallingParts.map((p) => (
             <rect
               key={p.id}
               x={p.x}
-              y={CONVEYOR_Y + 2}
-              width={14}
-              height={8}
-              rx={2}
+              y={p.y}
+              width={10}
+              height={7}
+              rx={1.5}
               fill={p.color}
-              opacity={0.9}
+              opacity={0.85}
             />
           ))}
 
@@ -286,7 +385,7 @@ export default function RoboticArmTwin() {
               strokeLinecap="round"
               initial={false}
               animate={{ x2: elbowX, y2: elbowY }}
-              transition={{ duration: stepDuration / 1000 * 0.8, ease: "easeInOut" }}
+              transition={{ duration: transitionDur, ease: "easeInOut" }}
             />
 
             {/* Lower arm segment */}
@@ -298,7 +397,7 @@ export default function RoboticArmTwin() {
               strokeLinecap="round"
               initial={false}
               animate={{ x1: elbowX, y1: elbowY, x2: wristX, y2: wristY }}
-              transition={{ duration: stepDuration / 1000 * 0.8, ease: "easeInOut" }}
+              transition={{ duration: transitionDur, ease: "easeInOut" }}
             />
 
             {/* Shoulder joint (base) */}
@@ -315,7 +414,7 @@ export default function RoboticArmTwin() {
               stroke="#FFF" strokeWidth={1.5}
               initial={false}
               animate={{ cx: elbowX, cy: elbowY }}
-              transition={{ duration: stepDuration / 1000 * 0.8, ease: "easeInOut" }}
+              transition={{ duration: transitionDur, ease: "easeInOut" }}
             />
 
             {/* Wrist joint */}
@@ -325,7 +424,7 @@ export default function RoboticArmTwin() {
               stroke="#FFF" strokeWidth={1.5}
               initial={false}
               animate={{ cx: wristX, cy: wristY }}
-              transition={{ duration: stepDuration / 1000 * 0.8, ease: "easeInOut" }}
+              transition={{ duration: transitionDur, ease: "easeInOut" }}
             />
 
             {/* Gripper prongs */}
@@ -337,7 +436,7 @@ export default function RoboticArmTwin() {
               strokeLinecap="round"
               initial={false}
               animate={{ x1: wristX, y1: wristY, x2: leftProngX, y2: leftProngY }}
-              transition={{ duration: stepDuration / 1000 * 0.6, ease: "easeInOut" }}
+              transition={{ duration: gripDur, ease: "easeInOut" }}
             />
             <motion.line
               x1={wristX} y1={wristY}
@@ -347,7 +446,7 @@ export default function RoboticArmTwin() {
               strokeLinecap="round"
               initial={false}
               animate={{ x1: wristX, y1: wristY, x2: rightProngX, y2: rightProngY }}
-              transition={{ duration: stepDuration / 1000 * 0.6, ease: "easeInOut" }}
+              transition={{ duration: gripDur, ease: "easeInOut" }}
             />
 
             {/* Gripper joint */}
@@ -357,15 +456,15 @@ export default function RoboticArmTwin() {
               stroke="#FFF" strokeWidth={1}
               initial={false}
               animate={{ cx: wristX, cy: wristY }}
-              transition={{ duration: stepDuration / 1000 * 0.8, ease: "easeInOut" }}
+              transition={{ duration: transitionDur, ease: "easeInOut" }}
             />
 
-            {/* Carried part — positioned between gripper prong tips */}
+            {/* Carried part — plain rect at prong-tip midpoint (no motion.rect to avoid fly-in) */}
             {carriedPartColor && (() => {
               const tipMidX = (leftProngX + rightProngX) / 2;
               const tipMidY = (leftProngY + rightProngY) / 2;
               return (
-                <motion.rect
+                <rect
                   x={tipMidX - 5}
                   y={tipMidY - 3.5}
                   width={10}
@@ -373,9 +472,6 @@ export default function RoboticArmTwin() {
                   rx={1.5}
                   fill={carriedPartColor}
                   opacity={0.95}
-                  initial={false}
-                  animate={{ x: tipMidX - 5, y: tipMidY - 3.5 }}
-                  transition={{ duration: stepDuration / 1000 * 0.8, ease: "easeInOut" }}
                 />
               );
             })()}
