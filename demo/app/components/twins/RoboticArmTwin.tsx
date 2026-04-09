@@ -110,10 +110,11 @@ export default function RoboticArmTwin() {
         const next = (prev + 1) % CYCLE_SEQUENCE.length;
         const poseName = CYCLE_SEQUENCE[next];
 
-        // Wait at idle — don't reach down until a part is near the pick zone
+        // Wait at idle — don't reach down until a part is centered in the pick zone
+        // The arm takes 1 step (~320ms) from reachDown→grab, part moves ~4px in that time
         if (poseName === "reachDown") {
           const nearPick = partsRef.current.some(
-            (p) => !p.picked && !p.placed && p.x >= PICK_X - 25
+            (p) => !p.picked && !p.placed && p.x >= PICK_X - 6 && p.x <= PICK_X + 6
           );
           if (!nearPick) return prev;
         }
@@ -243,10 +244,10 @@ export default function RoboticArmTwin() {
   const jointColor = (status: string) =>
     status === "error" ? "#DC2626" : status === "warn" ? "#EA580C" : "#16A34A";
 
-  // Bearing-wear shake on the whole arm group
+  // Bearing-wear shake on the whole arm group (subtle)
   const armShake = anomaly === "bearing-wear" ? {
-    x: [0, -1.5, 1.5, -1, 1, 0],
-    y: [0, 1, -1, 0.5, -0.5, 0],
+    x: [0, -0.75, 0.75, -0.5, 0.5, 0],
+    y: [0, 0.5, -0.5, 0.25, -0.25, 0],
   } : { x: 0, y: 0 };
 
   // Compute arm segment endpoints from pose angles
@@ -459,19 +460,20 @@ export default function RoboticArmTwin() {
               transition={{ duration: transitionDur, ease: "easeInOut" }}
             />
 
-            {/* Carried part — plain rect at prong-tip midpoint (no motion.rect to avoid fly-in) */}
+            {/* Carried part — motion.rect that animates with arm, initial matches animate to prevent fly-in */}
             {carriedPartColor && (() => {
               const tipMidX = (leftProngX + rightProngX) / 2;
               const tipMidY = (leftProngY + rightProngY) / 2;
               return (
-                <rect
-                  x={tipMidX - 5}
-                  y={tipMidY - 3.5}
+                <motion.rect
                   width={10}
                   height={7}
                   rx={1.5}
                   fill={carriedPartColor}
                   opacity={0.95}
+                  initial={{ x: tipMidX - 5, y: tipMidY - 3.5 }}
+                  animate={{ x: tipMidX - 5, y: tipMidY - 3.5 }}
+                  transition={{ duration: transitionDur, ease: "easeInOut" }}
                 />
               );
             })()}
