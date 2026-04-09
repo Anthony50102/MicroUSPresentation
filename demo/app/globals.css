@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-terminal: #1E293B;
+  --color-terminal-text: #E2E8F0;
+  --color-terminal-accent: #38BDF8;
+  --color-terminal-input: #0F172A;
+  --color-charcoal: #1E293B;
+  --color-blue: #2563EB;
+  --color-purple: #7C3AED;
+  --color-teal: #0D9488;
+  --color-orange: #EA580C;
+  --color-green: #16A34A;
+  --color-red: #DC2626;
+  --color-muted: #94A3B8;
+  --color-border: #E2E8F0;
+
+  --font-mono: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+}
+
+/* Touch-friendly tap targets */
+button, a, input {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent iOS zoom on input focus */
+input[type="text"] {
+  font-size: 16px;
+}
+
+/* Terminal chat scrollbar */
+.terminal-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.terminal-scroll::-webkit-scrollbar-track {
+  background: var(--color-terminal);
+}
+.terminal-scroll::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 3px;
+}
+
+/* Safe area insets for notched phones */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+.cursor-blink {
+  animation: blink 1s infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.stream-in {
+  animation: fadeIn 0.15s ease-out;
+}
+
+/* Anomaly pulse animation */
+@keyframes pulse-warn {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.pulse-warn {
+  animation: pulse-warn 1.5s ease-in-out infinite;
+}
