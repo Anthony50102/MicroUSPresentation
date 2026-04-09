@@ -1,8 +1,8 @@
 "use client";
 
 import { useSimulation } from "@/lib/simulation/SimulationContext";
-import { motion, useAnimationControls } from "framer-motion";
-import { useEffect, useState, useCallback } from "react";
+import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 
 // ---- Constants ----
 const CONVEYOR_Y = 248;
@@ -60,21 +60,16 @@ export default function RoboticArmTwin() {
   const [poseIdx, setPoseIdx] = useState(0);
   const [pose, setPose] = useState<ArmPose>(POSES.idle);
 
-  // Conveyor parts
-  const [parts, setParts] = useState<ConveyorPart[]>(() =>
-    Array.from({ length: 4 }, (_, i) => ({
-      id: i,
-      x: -20 - i * 60,
-      picked: false,
-      placed: false,
-      color: PART_COLORS[i % PART_COLORS.length],
-    }))
-  );
-  const [nextPartId, setNextPartId] = useState(4);
+  // Conveyor parts — start with one approaching and one queued
+  const [parts, setParts] = useState<ConveyorPart[]>(() => [
+    { id: 0, x: 40, picked: false, placed: false, color: PART_COLORS[0] },
+    { id: 1, x: -50, picked: false, placed: false, color: PART_COLORS[1] },
+  ]);
+  const [nextPartId, setNextPartId] = useState(2);
   const [carriedPartColor, setCarriedPartColor] = useState<string | null>(null);
 
-  // Placed parts on the output side
-  const [placedParts, setPlacedParts] = useState<{ id: number; x: number; color: string; offset: number }[]>([]);
+  // Bin parts — fade out after landing
+  const [binParts, setBinParts] = useState<{ id: number; color: string; offset: number; age: number }[]>([]);
 
   // Cycle speed based on simulation cycleTime (slower when bearing-wear)
   const stepDuration = anomaly === "bearing-wear" ? 500 : 320;
@@ -117,12 +112,12 @@ export default function RoboticArmTwin() {
           });
         }
 
-        // Handle part placing
+        // Handle part placing — drop into bin
         if (poseName === "release" && carriedPartColor) {
-          const placementOffset = anomaly === "calibration-drift" ? (Math.random() - 0.5) * 16 : 0;
-          setPlacedParts((prev) => {
-            const newParts = [...prev, { id: Date.now(), x: PLACE_X, color: carriedPartColor!, offset: placementOffset }];
-            return newParts.slice(-6); // keep last 6
+          const placementOffset = anomaly === "calibration-drift" ? (Math.random() - 0.5) * 10 : 0;
+          setBinParts((prev) => {
+            const newParts = [...prev, { id: Date.now(), color: carriedPartColor!, offset: placementOffset, age: 0 }];
+            return newParts.slice(-5);
           });
           setCarriedPartColor(null);
         }
@@ -133,31 +128,45 @@ export default function RoboticArmTwin() {
     return () => clearInterval(interval);
   }, [anomaly, stepDuration, carriedPartColor]);
 
-  // Advance conveyor
+  // Advance conveyor — slower, less frequent parts
   useEffect(() => {
     const interval = setInterval(() => {
       setParts((prev) => {
         let updated = prev.map((p) =>
-          p.picked ? p : { ...p, x: p.x + 1.5 }
+          p.picked ? p : { ...p, x: p.x + 0.6 }
         );
-        // Remove parts past the right edge
-        updated = updated.filter((p) => p.x < 180 || p.picked);
-        // Spawn new parts from the left
-        if (updated.filter((p) => !p.picked).every((p) => p.x > 0)) {
-          setNextPartId((id) => {
-            updated.push({
-              id: id,
-              x: -25,
-              picked: false,
-              placed: false,
-              color: PART_COLORS[id % PART_COLORS.length],
-            });
-            return id + 1;
-          });
-        }
+        // Remove parts past pick zone that weren't picked
+        updated = updated.filter((p) => p.x < PICK_X + 30 || p.picked);
         return updated;
       });
     }, 50);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Spawn new parts infrequently — one every ~4 arm cycles
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setParts((prev) => {
+        const onBelt = prev.filter((p) => !p.picked);
+        // Only spawn if fewer than 2 on belt and none near the start
+        if (onBelt.length < 2 && onBelt.every((p) => p.x > 30)) {
+          const id = nextPartId;
+          setNextPartId((n) => n + 1);
+          return [...prev, { id, x: -20, picked: false, placed: false, color: PART_COLORS[id % PART_COLORS.length] }];
+        }
+        return prev;
+      });
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [nextPartId]);
+
+  // Age out bin parts (fade then remove)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBinParts((prev) =>
+        prev.map((p) => ({ ...p, age: p.age + 1 })).filter((p) => p.age < 8)
+      );
+    }, 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -219,24 +228,25 @@ export default function RoboticArmTwin() {
           {/* Belt label */}
           <text x={5} y={CONVEYOR_Y - 4} fontSize="6" fill="#64748B" fontFamily="monospace">INPUT CONVEYOR</text>
 
-          {/* === OUTPUT ZONE === */}
-          <rect x={195} y={CONVEYOR_Y} width={95} height={CONVEYOR_H} rx={2} fill="#1E3A2F" stroke="#16A34A40" strokeWidth={1} />
-          <text x={200} y={CONVEYOR_Y - 4} fontSize="6" fill="#16A34A80" fontFamily="monospace">OUTPUT</text>
+          {/* === OUTPUT BIN === */}
+          {/* Bin container */}
+          <rect x={PLACE_X - 14} y={CONVEYOR_Y - 20} width={28} height={32} rx={2} fill="none" stroke="#16A34A60" strokeWidth={1.5} />
+          <rect x={PLACE_X - 13} y={CONVEYOR_Y + 10} width={26} height={2} rx={1} fill="#16A34A40" />
+          <text x={PLACE_X - 10} y={CONVEYOR_Y + CONVEYOR_H + 10} fontSize="5" fill="#16A34A80" fontFamily="monospace">BIN</text>
 
-          {/* Placed parts in output zone */}
-          {placedParts.map((p, i) => (
+          {/* Parts in bin — stack up and fade out */}
+          {binParts.map((p, i) => (
             <motion.rect
               key={p.id}
-              x={205 + i * 14 + p.offset}
-              y={CONVEYOR_Y + 2}
+              x={PLACE_X - 5 + p.offset}
+              y={CONVEYOR_Y + 4 - i * 5}
               width={10}
-              height={8}
-              rx={1.5}
+              height={4}
+              rx={1}
               fill={p.color}
-              opacity={0.9}
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 0.9 }}
-              transition={{ duration: 0.2 }}
+              initial={{ opacity: 0.9, scale: 1 }}
+              animate={{ opacity: Math.max(0, 1 - p.age * 0.15), scale: 1 }}
+              transition={{ duration: 0.3 }}
             />
           ))}
 
@@ -257,10 +267,6 @@ export default function RoboticArmTwin() {
           {/* Pick zone indicator */}
           <rect x={PICK_X - 12} y={CONVEYOR_Y - 2} width={24} height={CONVEYOR_H + 4} rx={2} fill="none" stroke="#3B82F640" strokeWidth={1} strokeDasharray="3 2" />
           <text x={PICK_X - 8} y={CONVEYOR_Y + CONVEYOR_H + 10} fontSize="5" fill="#3B82F680" fontFamily="monospace">PICK</text>
-
-          {/* Place zone indicator */}
-          <rect x={PLACE_X - 12} y={CONVEYOR_Y - 2} width={24} height={CONVEYOR_H + 4} rx={2} fill="none" stroke="#16A34A40" strokeWidth={1} strokeDasharray="3 2" />
-          <text x={PLACE_X - 10} y={CONVEYOR_Y + CONVEYOR_H + 10} fontSize="5" fill="#16A34A80" fontFamily="monospace">PLACE</text>
 
           {/* === ARM BASE === */}
           <rect x={ARM_BASE_X - 18} y={ARM_BASE_Y} width={36} height={14} rx={3} fill="#475569" />
@@ -354,21 +360,25 @@ export default function RoboticArmTwin() {
               transition={{ duration: stepDuration / 1000 * 0.8, ease: "easeInOut" }}
             />
 
-            {/* Carried part (moves with wrist) */}
-            {carriedPartColor && (
-              <motion.rect
-                x={wristX - 5}
-                y={wristY + 8}
-                width={10}
-                height={7}
-                rx={1.5}
-                fill={carriedPartColor}
-                opacity={0.95}
-                initial={false}
-                animate={{ x: wristX - 5, y: wristY + 8 }}
-                transition={{ duration: stepDuration / 1000 * 0.8, ease: "easeInOut" }}
-              />
-            )}
+            {/* Carried part — positioned between gripper prong tips */}
+            {carriedPartColor && (() => {
+              const tipMidX = (leftProngX + rightProngX) / 2;
+              const tipMidY = (leftProngY + rightProngY) / 2;
+              return (
+                <motion.rect
+                  x={tipMidX - 5}
+                  y={tipMidY - 3.5}
+                  width={10}
+                  height={7}
+                  rx={1.5}
+                  fill={carriedPartColor}
+                  opacity={0.95}
+                  initial={false}
+                  animate={{ x: tipMidX - 5, y: tipMidY - 3.5 }}
+                  transition={{ duration: stepDuration / 1000 * 0.8, ease: "easeInOut" }}
+                />
+              );
+            })()}
           </motion.g>
 
           {/* === HUD OVERLAY === */}
