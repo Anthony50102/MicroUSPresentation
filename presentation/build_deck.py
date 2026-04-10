@@ -302,10 +302,8 @@ tb(s, Inches(1.5), Inches(2.5), Inches(10), Inches(3.0),
 s = prs.slides.add_slide(prs.slide_layouts[6])
 set_gradient_bg(s)
 
-tb(s, Inches(1.5), Inches(2.2), Inches(10), Inches(1.5),
-   '2:14 AM', 72, WHITE, bold=True)
-tb(s, Inches(1.5), Inches(4.0), Inches(10), Inches(0.8),
-   'Etch chamber 3.', 24, DIM)
+tb(s, Inches(0), Inches(2.5), Inches(13.333), Inches(2.5),
+   '2:14 AM', 72, WHITE, bold=True, align=PP_ALIGN.CENTER)
 
 
 # ───────────────────────────────────
