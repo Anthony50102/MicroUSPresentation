@@ -11,6 +11,9 @@ from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 from pptx.enum.shapes import MSO_SHAPE
 import math
+import os
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 SLIDE_WIDTH = Inches(13.333)
 SLIDE_HEIGHT = Inches(7.5)
@@ -190,17 +193,7 @@ tb(s, Inches(1.5), Inches(6.05), Inches(6), Inches(0.4),
 
 
 # ───────────────────────────────────
-# SLIDE 2 — The Confession (reworked)
-# ───────────────────────────────────
-s = prs.slides.add_slide(prs.slide_layouts[6])
-set_gradient_bg(s)
-tb(s, Inches(1.5), Inches(2.5), Inches(10), Inches(3.0),
-   'Your twins can see everything.\nThey can\'t do anything\nabout what they see.',
-   42, CREAM, bold=True)
-
-
-# ───────────────────────────────────
-# SLIDE 3 — What Is a Digital Twin? (bigger)
+# SLIDE 2 — What Is a Digital Twin? (bigger)
 # ───────────────────────────────────
 s = prs.slides.add_slide(prs.slide_layouts[6])
 set_gradient_bg(s)
@@ -211,11 +204,15 @@ tb(s, Inches(1.2), Inches(0.5), Inches(5), Inches(0.5),
 rrect_text(s, Inches(0.8), Inches(1.8), Inches(4.8), Inches(4.0),
            'Physical\nSystem', 32, WHITE, fill=CARD_BG, line=ACCENT)
 
-# Large arrows
-tb(s, Inches(5.7), Inches(2.5), Inches(2.0), Inches(1.0),
-   'Sensors & Data  →', 18, CREAM, align=PP_ALIGN.CENTER)
-tb(s, Inches(5.7), Inches(4.2), Inches(2.0), Inches(1.0),
-   '←  Simulation', 18, CREAM, align=PP_ALIGN.CENTER)
+# Large arrows — arrow character on its own line, label below
+tb(s, Inches(5.7), Inches(2.2), Inches(2.0), Inches(1.0),
+   '→', 48, CREAM, align=PP_ALIGN.CENTER)
+tb(s, Inches(5.7), Inches(3.0), Inches(2.0), Inches(0.5),
+   'Sensors & Data', 16, DIM, align=PP_ALIGN.CENTER)
+tb(s, Inches(5.7), Inches(4.0), Inches(2.0), Inches(1.0),
+   '←', 48, CREAM, align=PP_ALIGN.CENTER)
+tb(s, Inches(5.7), Inches(4.8), Inches(2.0), Inches(0.5),
+   'Simulation', 16, DIM, align=PP_ALIGN.CENTER)
 
 # Large Digital Twin box (right)
 rrect_text(s, Inches(7.7), Inches(1.8), Inches(4.8), Inches(4.0),
@@ -266,8 +263,11 @@ gens = [
     ('Gen 3', 'Predictive', '"Something\nwill go wrong"'),
     ('Gen 4', '?', ''),
 ]
+card_w = Inches(2.7)
+total_w = 4 * card_w.inches + 3 * 0.3
+margin = (13.333 - total_w) / 2
 for i, (label, name, desc) in enumerate(gens):
-    x = Inches(1.0 + i * 3.1)
+    x = Inches(margin + i * (card_w.inches + 0.3))
     fill = CARD_BG if i < 3 else None
     line_c = DARKER_DIM if i < 3 else ACCENT
     rrect_text(s, x, Inches(1.8), Inches(2.7), Inches(1.3),
@@ -277,7 +277,8 @@ for i, (label, name, desc) in enumerate(gens):
         tb(s, x, Inches(3.3), Inches(2.7), Inches(1.2),
            desc, 15, DIM, align=PP_ALIGN.CENTER)
     if i < 3:
-        tb(s, x + Inches(2.6), Inches(2.0), Inches(0.6), Inches(0.8),
+        arrow_x = x + card_w
+        tb(s, arrow_x, Inches(2.1), Inches(0.3), Inches(1.0),
            '→', 24, DARKER_DIM, align=PP_ALIGN.CENTER)
 
 tb(s, Inches(1.0), Inches(5.2), Inches(11), Inches(1.5),
@@ -286,46 +287,25 @@ tb(s, Inches(1.0), Inches(5.2), Inches(11), Inches(1.5),
 
 
 # ───────────────────────────────────
-# SLIDE 6 — The 2 AM Story (single graphic approach)
+# SLIDE 5 — The Confession
+# ───────────────────────────────────
+s = prs.slides.add_slide(prs.slide_layouts[6])
+set_gradient_bg(s)
+tb(s, Inches(1.5), Inches(2.5), Inches(10), Inches(3.0),
+   'Digital twins can see everything.\nThey can\'t do anything\nabout what they see.',
+   42, CREAM, bold=True)
+
+
+# ───────────────────────────────────
+# SLIDE 6 — The 2 AM Story (minimal, speaker carries it)
 # ───────────────────────────────────
 s = prs.slides.add_slide(prs.slide_layouts[6])
 set_gradient_bg(s)
 
-# Large dark card representing a fab alert screen
-rrect(s, Inches(0.5), Inches(0.3), Inches(12.3), Inches(6.9),
-      fill='#0B1120', line=DARKER_DIM)
-
-tb(s, Inches(1.5), Inches(1.0), Inches(5), Inches(0.8),
-   '2:00 AM', 52, WHITE, bold=True)
-tb(s, Inches(1.5), Inches(1.9), Inches(8), Inches(0.5),
-   'Etch chamber 3 — temperature drift detected', 20, DIM)
-
-rect(s, Inches(1.5), Inches(2.8), Inches(1.5), Inches(0.012), fill=ACCENT)
-
-# Two columns: what the twin did vs what it didn't
-tb(s, Inches(1.5), Inches(3.2), Inches(5), Inches(0.5),
-   'The twin detected:', 18, CREAM, bold=True)
-tb(s, Inches(1.5), Inches(3.7), Inches(5), Inches(0.5),
-   'Temperature crossing a threshold. That\'s it.', 16, DIM)
-
-tb(s, Inches(1.5), Inches(4.5), Inches(5), Inches(0.5),
-   'The twin didn\'t know:', 18, CREAM, bold=True)
-multi_para(s, Inches(1.5), Inches(5.0), Inches(5), Inches(2.0), [
-    ('It was a failing heater element.', 16, DIM, False),
-    ('This happened 6 months ago on another chamber.', 16, DIM, False),
-    ('A replacement part was already in inventory.', 16, DIM, False),
-])
-
-# Right side: the result
-tb(s, Inches(7.5), Inches(3.2), Inches(4.5), Inches(0.5),
-   'Detected in', 16, DIM)
-tb(s, Inches(7.5), Inches(3.7), Inches(4.5), Inches(0.8),
-   '30 seconds', 36, CREAM, bold=True)
-
-tb(s, Inches(7.5), Inches(4.8), Inches(4.5), Inches(0.5),
-   'Resolved in', 16, DIM)
-tb(s, Inches(7.5), Inches(5.3), Inches(4.5), Inches(0.8),
-   '14 hours', 36, WHITE, bold=True)
+tb(s, Inches(1.5), Inches(2.2), Inches(10), Inches(1.5),
+   '2:14 AM', 72, WHITE, bold=True)
+tb(s, Inches(1.5), Inches(4.0), Inches(10), Inches(0.8),
+   'Etch chamber 3.', 24, DIM)
 
 
 # ───────────────────────────────────
@@ -353,9 +333,12 @@ caps = [
     ('Tool Use', 'Connects to real\nsystems, APIs,\nand databases'),
     ('Reflection', 'Evaluates its own\nactions and adjusts\nstrategy'),
 ]
+card_w = Inches(2.7)
+total_w = 4 * card_w.inches + 3 * 0.3  # 3 gaps of 0.3"
+margin = (13.333 - total_w) / 2
 for i, (title, desc) in enumerate(caps):
-    x = Inches(1.0 + i * 3.1)
-    rrect_text(s, x, Inches(2.0), Inches(2.7), Inches(1.2),
+    x = Inches(margin + i * (card_w.inches + 0.3))
+    rrect_text(s, x, Inches(2.0), card_w, Inches(1.2),
               title, 22, WHITE, fill=CARD_BG, line=ACCENT, bold=True)
     tb(s, x + Inches(0.15), Inches(3.5), Inches(2.5), Inches(1.8),
        desc, 15, DIM, align=PP_ALIGN.CENTER)
@@ -367,18 +350,18 @@ for i, (title, desc) in enumerate(caps):
 s = prs.slides.add_slide(prs.slide_layouts[6])
 set_gradient_bg(s)
 
-# Two circles — spread further apart so overlap zone is clear
+# Two circles — outline only (no fill) so intersection outlines are both visible
 # Left circle: DT
 oval(s, Inches(1.8), Inches(1.2), Inches(5.5), Inches(5.5),
-     fill=CARD_BG, line=ACCENT, lw=Pt(1.5))
+     fill=None, line=ACCENT, lw=Pt(1.5))
 tb(s, Inches(2.3), Inches(3.2), Inches(3.5), Inches(1.0),
    'Digital\nTwins', 30, WHITE, bold=True)
 tb(s, Inches(2.3), Inches(4.5), Inches(3.2), Inches(1.0),
    'The data.\nThe models.\nThe simulation.', 16, DIM)
 
-# Right circle: Agentic AI — offset so overlap is visible
+# Right circle: Agentic AI
 oval(s, Inches(6.0), Inches(1.2), Inches(5.5), Inches(5.5),
-     fill=CARD_BG, line=ACCENT, lw=Pt(1.5))
+     fill=None, line=ACCENT, lw=Pt(1.5))
 tb(s, Inches(7.8), Inches(3.2), Inches(3.5), Inches(1.0),
    'Agentic\nAI', 30, WHITE, bold=True)
 tb(s, Inches(7.8), Inches(4.5), Inches(3.2), Inches(1.0),
@@ -395,7 +378,7 @@ tb(s, Inches(5.5), Inches(3.3), Inches(2.3), Inches(1.5),
 s = prs.slides.add_slide(prs.slide_layouts[6])
 set_gradient_bg(s)
 
-tb(s, Inches(1.5), Inches(2.5), Inches(10.5), Inches(2.5),
+tb(s, Inches(0), Inches(2.5), Inches(13.333), Inches(2.5),
    'The twin that thinks.', 56, WHITE, bold=True, align=PP_ALIGN.CENTER)
 
 
@@ -420,10 +403,12 @@ for i, step in enumerate(steps):
     x = start_x + i * (box_w + gap)
     rrect_text(s, x, y_main, box_w, box_h,
               step, 20, WHITE, fill=CARD_BG, line=ACCENT)
-    # Arrow to next (except last)
+    # Arrow to next (except last) — vertically centered on box
     if i < 4:
         ax = x + box_w + Inches(0.05)
-        tb(s, ax, y_main + Inches(0.25), gap - Inches(0.1), Inches(0.6),
+        arrow_h = Inches(0.6)
+        arrow_y = y_main + (box_h - arrow_h) / 2
+        tb(s, ax, arrow_y, gap - Inches(0.1), arrow_h,
            '→', 22, ACCENT, align=PP_ALIGN.CENTER)
 
 # Feedback arrow: Reflect back to Perceive (drawn below the boxes)
@@ -433,16 +418,19 @@ first_x = start_x + box_w / 2
 
 # Bottom feedback line
 rect(s, first_x, fb_y, last_x - first_x, Inches(0.015), fill=ACCENT)
-# Left vertical
-rect(s, first_x - Inches(0.008), y_main + box_h, Inches(0.015),
-     fb_y - y_main - box_h + Inches(0.015), fill=ACCENT)
-# Right vertical
+# Right vertical (down from Reflect)
 rect(s, last_x - Inches(0.008), y_main + box_h, Inches(0.015),
      fb_y - y_main - box_h + Inches(0.015), fill=ACCENT)
+# Left vertical (up to Perceive)
+rect(s, first_x - Inches(0.008), y_main + box_h, Inches(0.015),
+     fb_y - y_main - box_h + Inches(0.015), fill=ACCENT)
+# Arrowhead pointing up at Perceive box
+tb(s, first_x - Inches(0.25), y_main + box_h - Inches(0.15), Inches(0.5), Inches(0.4),
+   '▲', 14, ACCENT, align=PP_ALIGN.CENTER)
 
 # Label on feedback
 tb(s, Inches(4.5), fb_y + Inches(0.1), Inches(4.5), Inches(0.5),
-   'Continuous feedback loop', 14, DIM, align=PP_ALIGN.CENTER)
+   'Continuous feedback', 14, DIM, align=PP_ALIGN.CENTER)
 
 # Subtitle
 tb(s, Inches(1.2), Inches(5.5), Inches(11), Inches(1.0),
@@ -470,10 +458,6 @@ for i, (label, name, line_c, text_c) in enumerate(layers):
     tb(s, Inches(0.6), y + Inches(0.3), Inches(2.4), Inches(0.7),
        label, 22, CREAM if i == 0 else DIM, bold=i == 0,
        align=PP_ALIGN.RIGHT)
-
-tb(s, Inches(1.2), Inches(6.4), Inches(11), Inches(0.6),
-   'Everything below the top layer already exists.',
-   18, CREAM, italic=True)
 
 
 # ───────────────────────────────────
@@ -518,14 +502,19 @@ agents = [
     ('Analyst', 'Finds root causes'),
     ('Planner', 'Schedules responses'),
 ]
+card_w = Inches(3.5)
+total_w = 3 * card_w.inches + 2 * 0.4  # 2 gaps of 0.4"
+margin = (13.333 - total_w) / 2
 for i, (name, desc) in enumerate(agents):
-    x = Inches(1.2 + i * 4.0)
-    rrect_text(s, x, Inches(2.2), Inches(3.5), Inches(2.0),
+    x = Inches(margin + i * (card_w.inches + 0.4))
+    rrect_text(s, x, Inches(2.2), card_w, Inches(2.0),
               name, 28, WHITE, fill=CARD_BG, line=ACCENT)
-    tb(s, x, Inches(4.4), Inches(3.5), Inches(0.6),
+    tb(s, x, Inches(4.4), card_w, Inches(0.6),
        desc, 17, DIM, align=PP_ALIGN.CENTER)
     if i < 2:
-        tb(s, x + Inches(3.4), Inches(2.7), Inches(0.7), Inches(0.8),
+        arrow_h = Inches(0.8)
+        arrow_y = Inches(2.2) + (Inches(2.0) - arrow_h) / 2
+        tb(s, x + card_w, arrow_y, Inches(0.4), arrow_h,
            '→', 28, ACCENT, align=PP_ALIGN.CENTER)
 
 tb(s, Inches(1.2), Inches(5.6), Inches(11), Inches(1.0),
@@ -547,9 +536,12 @@ domains = [
     ('Robotic Arm', 'Bearing wear\n→ Predict\n→ Schedule'),
     ('ADAS Sensor Suite', 'Sensor fusion\n→ Safety\n→ Adapt'),
 ]
+card_w = Inches(3.6)
+total_w = 3 * card_w.inches + 2 * 0.35
+margin = (13.333 - total_w) / 2
 for i, (name, flow) in enumerate(domains):
-    x = Inches(1.0 + i * 4.1)
-    rrect_text(s, x, Inches(1.8), Inches(3.6), Inches(1.3),
+    x = Inches(margin + i * (card_w.inches + 0.35))
+    rrect_text(s, x, Inches(1.8), card_w, Inches(1.3),
               name, 24, WHITE, fill=CARD_BG, line=ACCENT)
     tb(s, x + Inches(0.3), Inches(3.4), Inches(3.0), Inches(2.0),
        flow, 18, DIM, align=PP_ALIGN.LEFT)
@@ -589,15 +581,22 @@ set_gradient_bg(s)
 tb(s, Inches(1.5), Inches(1.2), Inches(10), Inches(1.0),
    'Talk to an agentic digital twin yourself.', 36, WHITE, bold=True)
 
-# QR code placeholder
-rrect_text(s, Inches(4.5), Inches(2.5), Inches(4.3), Inches(3.5),
-          '[ QR Code ]', 24, DIM, fill=CARD_BG, line=ACCENT, bold=False)
+# QR code — demo
+qr_demo = os.path.join(SCRIPT_DIR, 'qr-demo.png')
+if os.path.exists(qr_demo):
+    s.shapes.add_picture(qr_demo, Inches(4.7), Inches(2.5), Inches(3.9), Inches(3.5))
+else:
+    rrect_text(s, Inches(4.5), Inches(2.5), Inches(4.3), Inches(3.5),
+              '[ QR Code ]', 24, DIM, fill=CARD_BG, line=ACCENT, bold=False)
 
 # Three domain labels
 for i, name in enumerate(['Edge AI', 'Robotic Arm', 'ADAS']):
     x = Inches(2.5 + i * 3.2)
     rrect_text(s, x, Inches(6.3), Inches(2.5), Inches(0.6),
               name, 14, CREAM, fill=CARD_BG, line=DARKER_DIM, bold=False)
+
+tb(s, Inches(0), Inches(6.95), Inches(13.333), Inches(0.4),
+   'tonypdemo.it.com', 14, DIM, align=PP_ALIGN.CENTER)
 
 
 # ───────────────────────────────────
@@ -612,14 +611,24 @@ tb(s, Inches(1.5), Inches(1.5), Inches(10), Inches(1.5),
 
 rect(s, Inches(1.5), Inches(3.5), Inches(2.5), Inches(0.012), fill=ACCENT)
 
-tb(s, Inches(1.5), Inches(4.0), Inches(10), Inches(1.0),
+tb(s, Inches(1.5), Inches(4.0), Inches(6), Inches(1.0),
    'Anthony Poole', 44, WHITE, bold=True)
-tb(s, Inches(1.5), Inches(4.9), Inches(10), Inches(0.6),
+tb(s, Inches(1.5), Inches(4.9), Inches(6), Inches(0.6),
    'AI Engineer, Microsoft', 24, CREAM)
-tb(s, Inches(1.5), Inches(5.7), Inches(10), Inches(0.5),
-   'anthonypoole.dev  ·  linkedin.com/in/anthonypoole', 18, DIM)
-tb(s, Inches(1.5), Inches(6.5), Inches(10), Inches(0.5),
+tb(s, Inches(1.5), Inches(5.7), Inches(6), Inches(0.5),
+   'anthony50102.github.io  ·  linkedin.com/in/anthony-poole-079548206', 18, DIM)
+tb(s, Inches(1.5), Inches(6.5), Inches(6), Inches(0.5),
    'Thank you.', 20, CREAM)
+
+# Personal site QR code (right side)
+qr_personal = os.path.join(SCRIPT_DIR, 'qr-personal.png')
+if os.path.exists(qr_personal):
+    s.shapes.add_picture(qr_personal, Inches(9.7), Inches(4.0), Inches(2.4), Inches(2.4))
+    tb(s, Inches(9.5), Inches(6.45), Inches(2.8), Inches(0.4),
+       'anthony50102.github.io', 12, DIM, align=PP_ALIGN.CENTER)
+else:
+    rrect_text(s, Inches(9.5), Inches(4.0), Inches(2.8), Inches(2.5),
+              '[ QR Code ]\nanthonypoole.dev', 14, DIM, fill=CARD_BG, line=DARKER_DIM, bold=False)
 
 
 # ═══════════════════════════════════════
