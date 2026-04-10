@@ -1,8 +1,10 @@
 """
-Full 18-slide deck v4 — Gradient Noir
+Full 20-slide deck v4 — Gradient Noir
 "The Next Layer for Digital Twins: From Simulation to Autonomous Action"
 
 Incorporates all feedback from review round.
+v4.1: Build animations (S5, S9), teal accent (S11, S18), native arrow
+connectors, speaker notes on all slides, high-res QR codes.
 """
 
 from pptx import Presentation
@@ -10,6 +12,8 @@ from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 from pptx.enum.shapes import MSO_SHAPE
+from lxml import etree
+from pptx.oxml.ns import qn
 import math
 import os
 
@@ -26,6 +30,7 @@ CREAM = '#E8E4D9'
 DIM = '#8B919C'
 DARKER_DIM = '#6B7280'
 ACCENT = '#D4D0C8'
+TEAL = '#2DD4BF'
 CARD_BG = '#151D30'
 CARD_BG2 = '#1A2236'
 FONT = 'Segoe UI'
@@ -166,6 +171,122 @@ def connector(slide, x1, y1, x2, y2, color, width=Pt(1.5)):
     return c
 
 
+def arrow_connector(slide, x1, y1, x2, y2, color, width=Pt(1.5)):
+    """Straight connector with arrowhead at the end."""
+    c = slide.shapes.add_connector(1, x1, y1, x2, y2)
+    c.line.color.rgb = hex_to_rgb(color)
+    c.line.width = width
+    sp_pr = c._element.find(qn('p:spPr'))
+    ln = sp_pr.find(qn('a:ln'))
+    if ln is None:
+        ln = etree.SubElement(sp_pr, qn('a:ln'))
+    tail = etree.SubElement(ln, qn('a:tailEnd'))
+    tail.set('type', 'triangle')
+    tail.set('w', 'med')
+    tail.set('len', 'med')
+    return c
+
+
+def add_appear_animations(slide, shape_groups):
+    """Add click-to-appear build animations to a slide.
+    shape_groups = [[shapes_click_1], [shapes_click_2], ...]
+    Each inner list appears together on one click.
+    """
+    timing = etree.SubElement(slide._element, qn('p:timing'))
+    tnLst = etree.SubElement(timing, qn('p:tnLst'))
+    root_par = etree.SubElement(tnLst, qn('p:par'))
+    root_cTn = etree.SubElement(root_par, qn('p:cTn'))
+    root_cTn.set('id', '1')
+    root_cTn.set('dur', 'indefinite')
+    root_cTn.set('restart', 'never')
+    root_cTn.set('nodeType', 'tmRoot')
+    root_children = etree.SubElement(root_cTn, qn('p:childTnLst'))
+
+    seq = etree.SubElement(root_children, qn('p:seq'))
+    seq.set('concurrent', '1')
+    seq.set('nextAc', 'seek')
+    seq_cTn = etree.SubElement(seq, qn('p:cTn'))
+    seq_cTn.set('id', '2')
+    seq_cTn.set('dur', 'indefinite')
+    seq_cTn.set('nodeType', 'mainSeq')
+    seq_children = etree.SubElement(seq_cTn, qn('p:childTnLst'))
+
+    prev_lst = etree.SubElement(seq, qn('p:prevCondLst'))
+    pc = etree.SubElement(prev_lst, qn('p:cond'))
+    pc.set('evt', 'onPrev')
+    pc.set('delay', '0')
+    etree.SubElement(etree.SubElement(pc, qn('p:tgtEl')), qn('p:sldTgt'))
+    next_lst = etree.SubElement(seq, qn('p:nextCondLst'))
+    nc = etree.SubElement(next_lst, qn('p:cond'))
+    nc.set('evt', 'onNext')
+    nc.set('delay', '0')
+    etree.SubElement(etree.SubElement(nc, qn('p:tgtEl')), qn('p:sldTgt'))
+
+    ctn_id = 3
+    bld_spids = []
+
+    for group in shape_groups:
+        click_par = etree.SubElement(seq_children, qn('p:par'))
+        click_cTn = etree.SubElement(click_par, qn('p:cTn'))
+        click_cTn.set('id', str(ctn_id)); ctn_id += 1
+        click_cTn.set('fill', 'hold')
+        cl = etree.SubElement(click_cTn, qn('p:stCondLst'))
+        etree.SubElement(cl, qn('p:cond')).set('delay', '0')
+        click_children = etree.SubElement(click_cTn, qn('p:childTnLst'))
+
+        for shape in group:
+            spid = str(shape.shape_id)
+            bld_spids.append(spid)
+
+            s_par = etree.SubElement(click_children, qn('p:par'))
+            s_cTn = etree.SubElement(s_par, qn('p:cTn'))
+            s_cTn.set('id', str(ctn_id)); ctn_id += 1
+            s_cTn.set('fill', 'hold')
+            sl = etree.SubElement(s_cTn, qn('p:stCondLst'))
+            etree.SubElement(sl, qn('p:cond')).set('delay', '0')
+            s_children = etree.SubElement(s_cTn, qn('p:childTnLst'))
+
+            e_par = etree.SubElement(s_children, qn('p:par'))
+            e_cTn = etree.SubElement(e_par, qn('p:cTn'))
+            e_cTn.set('id', str(ctn_id)); ctn_id += 1
+            e_cTn.set('presetID', '1')
+            e_cTn.set('presetClass', 'entr')
+            e_cTn.set('presetSubtype', '0')
+            e_cTn.set('fill', 'hold')
+            e_cTn.set('nodeType', 'clickEffect')
+            el = etree.SubElement(e_cTn, qn('p:stCondLst'))
+            etree.SubElement(el, qn('p:cond')).set('delay', '0')
+            e_children = etree.SubElement(e_cTn, qn('p:childTnLst'))
+
+            p_set = etree.SubElement(e_children, qn('p:set'))
+            cBhvr = etree.SubElement(p_set, qn('p:cBhvr'))
+            set_cTn = etree.SubElement(cBhvr, qn('p:cTn'))
+            set_cTn.set('id', str(ctn_id)); ctn_id += 1
+            set_cTn.set('dur', '1')
+            set_cTn.set('fill', 'hold')
+            scl = etree.SubElement(set_cTn, qn('p:stCondLst'))
+            etree.SubElement(scl, qn('p:cond')).set('delay', '0')
+            tgtEl = etree.SubElement(cBhvr, qn('p:tgtEl'))
+            etree.SubElement(tgtEl, qn('p:spTgt')).set('spid', spid)
+            anl = etree.SubElement(cBhvr, qn('p:attrNameLst'))
+            etree.SubElement(anl, qn('p:attrName')).text = 'style.visibility'
+            to_el = etree.SubElement(p_set, qn('p:to'))
+            etree.SubElement(to_el, qn('p:strVal')).set('val', 'visible')
+
+    bldLst = etree.SubElement(timing, qn('p:bldLst'))
+    for spid in bld_spids:
+        bp = etree.SubElement(bldLst, qn('p:bldP'))
+        bp.set('spid', spid)
+        bp.set('grpId', '0')
+        bp.set('animBg', '1')
+
+
+def add_notes(slide, text):
+    """Add speaker notes to a slide."""
+    notes_slide = slide.notes_slide
+    notes_slide.notes_text_frame.text = text
+
+
 # ═══════════════════════════════════════
 # BUILD THE DECK
 # ═══════════════════════════════════════
@@ -264,10 +385,11 @@ for i, (val, label) in enumerate(metrics):
 
 
 # ───────────────────────────────────
-# SLIDE 5 — The Evolution
+# SLIDE 5 — The Evolution (build animation)
 # ───────────────────────────────────
 s = prs.slides.add_slide(prs.slide_layouts[6])
 set_gradient_bg(s)
+s5 = s  # Save reference for animations
 tb(s, Inches(1.2), Inches(0.5), Inches(5), Inches(0.5),
    'The Evolution', 20, DIM)
 
@@ -280,24 +402,31 @@ gens = [
 card_w = Inches(2.7)
 total_w = 4 * card_w.inches + 3 * 0.3
 margin = (13.333 - total_w) / 2
+s5_groups = []
 for i, (label, name, desc) in enumerate(gens):
     x = Inches(margin + i * (card_w.inches + 0.3))
+    group = []
     fill = CARD_BG if i < 3 else None
     line_c = DARKER_DIM if i < 3 else ACCENT
-    rrect_text(s, x, Inches(1.8), Inches(2.7), Inches(1.3),
+    card = rrect_text(s, x, Inches(1.8), Inches(2.7), Inches(1.3),
               f'{label}: {name}', 20, WHITE if i < 3 else CREAM,
               fill=fill, line=line_c, bold=True)
+    group.append(card)
     if desc:
-        tb(s, x, Inches(3.3), Inches(2.7), Inches(1.2),
+        desc_tb = tb(s, x, Inches(3.3), Inches(2.7), Inches(1.2),
            desc, 15, DIM, align=PP_ALIGN.CENTER)
+        group.append(desc_tb)
     if i < 3:
         arrow_x = x + card_w
-        tb(s, arrow_x, Inches(2.1), Inches(0.3), Inches(1.0),
+        arr = tb(s, arrow_x, Inches(2.1), Inches(0.3), Inches(1.0),
            '→', 24, DARKER_DIM, align=PP_ALIGN.CENTER)
+        group.append(arr)
+    s5_groups.append(group)
 
-tb(s, Inches(1.0), Inches(5.2), Inches(11), Inches(1.5),
+s5_bottom = tb(s, Inches(1.0), Inches(5.2), Inches(11), Inches(1.5),
    'Each generation gets smarter about what\'s happening.\nBut the human is still the one who decides what to do about it.',
    22, CREAM)
+s5_groups.append([s5_bottom])
 
 
 # ───────────────────────────────────
@@ -331,10 +460,11 @@ rect(s, Inches(1.5), Inches(4.3), Inches(3), Inches(0.012), fill=ACCENT)
 
 
 # ───────────────────────────────────
-# SLIDE 8 — Four Capabilities (no footnote)
+# SLIDE 9 — Four Capabilities (build animation)
 # ───────────────────────────────────
 s = prs.slides.add_slide(prs.slide_layouts[6])
 set_gradient_bg(s)
+s9 = s  # Save reference for animations
 tb(s, Inches(1.2), Inches(0.5), Inches(5), Inches(0.5),
    'What Makes an Agent', 20, DIM)
 
@@ -347,12 +477,17 @@ caps = [
 card_w = Inches(2.7)
 total_w = 4 * card_w.inches + 3 * 0.3  # 3 gaps of 0.3"
 margin = (13.333 - total_w) / 2
+s9_groups = []
 for i, (title, desc) in enumerate(caps):
     x = Inches(margin + i * (card_w.inches + 0.3))
-    rrect_text(s, x, Inches(2.0), card_w, Inches(1.2),
+    group = []
+    card = rrect_text(s, x, Inches(2.0), card_w, Inches(1.2),
               title, 22, WHITE, fill=CARD_BG, line=ACCENT, bold=True)
-    tb(s, x + Inches(0.15), Inches(3.5), Inches(2.5), Inches(1.8),
+    group.append(card)
+    desc_tb = tb(s, x + Inches(0.15), Inches(3.5), Inches(2.5), Inches(1.8),
        desc, 15, DIM, align=PP_ALIGN.CENTER)
+    group.append(desc_tb)
+    s9_groups.append(group)
 
 
 # ───────────────────────────────────
@@ -655,6 +790,170 @@ rect(s, Inches(1.5), Inches(5.3), Inches(2.5), Inches(0.012), fill=ACCENT)
 
 tb(s, Inches(1.5), Inches(5.6), Inches(6), Inches(0.5),
    'Thank you.', 22, CREAM)
+
+
+# ═══════════════════════════════════════
+# POST-BUILD: Animations
+# ═══════════════════════════════════════
+add_appear_animations(s5, s5_groups)
+add_appear_animations(s9, s9_groups)
+
+
+# ═══════════════════════════════════════
+# POST-BUILD: Speaker Notes
+# ═══════════════════════════════════════
+speaker_notes = {
+    0: (  # Slide 1 — Title
+        "Hey everyone. I'm Anthony Poole, software engineer at Microsoft — "
+        "I build AI systems. But I actually started a bit closer to y'all's world "
+        "than you'd think — I interned at AMD, did research in photonics, wrote my "
+        "thesis on digital twins, and I worked on embedded systems for autonomous "
+        "vehicles. But then I crossed over to the big tech AI side. And over the "
+        "last year I've watched something reshape how my team thinks about every "
+        "system we touch. Now when I look back at what's happening with digital "
+        "twins, I realize the same shift is heading this way."
+    ),
+    1: (  # Slide 2 — Section: Digital Twins
+        "[Section divider — click through quickly. This is a signpost, not a beat.]"
+    ),
+    2: (  # Slide 3 — What Is a Digital Twin?
+        "So let's make sure we're starting from the same place. A digital twin — "
+        "at its core — is a virtual model that stays continuously synced with a "
+        "physical system. Data flows in from sensors. Simulations flow back. "
+        "\"Most of you know this better than I do. I'm not here to explain digital "
+        "twins to you. I'm here to talk about what comes next.\""
+    ),
+    3: (  # Slide 4 — The Stakes
+        "In automotive manufacturing, unplanned downtime costs $22,000 a minute. "
+        "In semiconductor fabs it can hit $5 million an hour. And at the electric "
+        "grid level, U.S. power outages cost $121 billion last year alone. "
+        "Here's the real problem: these systems are generating more data every "
+        "minute than teams can act on in a week."
+    ),
+    4: (  # Slide 5 — The Evolution
+        "[BUILD ANIMATION — click through generations one at a time.]\n\n"
+        "Digital twins have been evolving. Gen 1 was static — a 3D model, a "
+        "schematic. Gen 2 was reactive — something went wrong, here's an alert. "
+        "Gen 3 — where a lot of you are or are heading — is predictive.\n\n"
+        "But notice — every generation gets smarter about what's happening. "
+        "None of them do anything about it."
+    ),
+    5: (  # Slide 6 — The Confession
+        "[Let the text land for a beat.]\n\n"
+        "Digital twins can see everything. They can't do anything about what "
+        "they see. That's not a failure — that's a ceiling. And I think we're "
+        "about to break through it."
+    ),
+    6: (  # Slide 7 — 2:14 AM
+        "[Slow. Conversational. Like you're telling a friend.]\n\n"
+        "You're a process engineer at a fab. It's 2:14 AM. Something shifts — "
+        "temperature drift, vibration spike. Your monitoring system catches it "
+        "instantly. You? You're asleep. By the time you wake up, understand "
+        "what happened, track down the part — five, six hours have passed.\n\n"
+        "The system detected it in seconds. It took the better part of a shift. "
+        "Detection and action are two completely different problems."
+    ),
+    7: (  # Slide 8 — Section: Agents
+        "That was digital twins. Now let's talk about agents.\n\n"
+        "I know — you've heard the word. It's been on keynote slides and "
+        "LinkedIn posts for a year. But I've spent the last year building "
+        "these systems, and they work. They've changed how my team solves "
+        "problems and makes decisions."
+    ),
+    8: (  # Slide 9 — Four Capabilities
+        "[BUILD ANIMATION — click through capabilities one at a time.]\n\n"
+        "Autonomy — it operates within boundaries you define, without waiting. "
+        "Planning — it breaks complex problems into multi-step workflows. "
+        "Tool use — it connects to real systems, APIs, databases. "
+        "Reflection — it evaluates what it did and adjusts its approach.\n\n"
+        "That last one is the one people underestimate."
+    ),
+    9: (  # Slide 10 — Convergence Venn
+        "On one side, digital twins — the data, the models, the simulation. "
+        "On the other, agentic AI — the reasoning, the planning, the action. "
+        "If you're looking at this thinking 'why aren't these connected yet?' "
+        "— that's exactly the right question."
+    ),
+    10: (  # Slide 11 — The Reveal
+        "[Let the slide breathe. A beat of silence before you speak.]\n\n"
+        "What if the twin could think? A digital twin that doesn't just "
+        "mirror a system — it reasons about it. It plans. It acts. Not "
+        "replacing the engineer. Giving the engineer a partner that never "
+        "sleeps and never loses context."
+    ),
+    11: (  # Slide 12 — The Agentic Control Loop
+        "It's a control loop — something every engineer in this room already "
+        "thinks in. Perceive — ingest data. Reason — identify what's happening "
+        "and why. Plan — build a response. Act — execute through connected "
+        "systems. Reflect — evaluate the outcome.\n\n"
+        "Remember that engineer at 2 AM? An agentic twin wouldn't have just "
+        "detected the drift. It would have pulled historical patterns, "
+        "identified the failing element, and scheduled the repair. Minutes, "
+        "not hours."
+    ),
+    12: (  # Slide 13 — Architecture
+        "Architecturally, it's simpler than you'd think. Physical system at "
+        "the bottom. Digital twin in the middle. And on top, a new cognitive "
+        "layer — the reasoning and decision-making.\n\n"
+        "Two of those three layers? You already have them. The whole idea is "
+        "one new layer on top of what you've already invested in."
+    ),
+    13: (  # Slide 14 — The Evidence
+        "IBM published a paper at AAAI 2025 on agentic digital twins for "
+        "shipping fleet management. XMPro has a multi-agent system in "
+        "production — reporting 30–40% reductions in unplanned downtime. "
+        "And Nature Computational Science published a formal evolutionary "
+        "framework this year.\n\n"
+        "This went from idea to research to production faster than most "
+        "people realize."
+    ),
+    14: (  # Slide 15 — Multi-Agent
+        "The architecture that's emerging isn't one giant AI doing everything. "
+        "It's specialized agents working together. A monitor that detects. "
+        "An analyst that finds root causes. A planner that schedules the "
+        "response. They collaborate — and critically — they check each "
+        "other's work. The agent that proposes is never the one that approves.\n\n"
+        "If that sounds like how a good engineering team works — it is."
+    ),
+    15: (  # Slide 16 — Three Worlds, One Pattern
+        "This isn't a solution for one industry. The same pattern applies "
+        "everywhere. Edge AI device drifts? The twin diagnoses and retrains. "
+        "Robotic arm shows bearing wear? The twin predicts and schedules "
+        "maintenance. ADAS sensor gets conflicting data? The twin runs safety "
+        "checks and adapts.\n\n"
+        "Different worlds. Same idea. That's how you know it's real."
+    ),
+    16: (  # Slide 17 — Challenges
+        "When an agent makes a bad decision, who owns it? Can you trace why "
+        "it made that call? These systems create attack surfaces we haven't "
+        "fully mapped. And governance frameworks weren't built for tools "
+        "that act on their own.\n\n"
+        "These are solvable problems. But they're real."
+    ),
+    17: (  # Slide 18 — Demo CTA
+        "I built something. Scan the QR code — you can talk to an agentic "
+        "digital twin right now. Three of them: edge AI, robotic arm, ADAS. "
+        "Ask what's wrong. Inject issues. Watch it reason.\n\n"
+        "[Give them 10–15 seconds to scan.]\n\n"
+        "The URL is at the bottom if you'd rather type. It'll be live after "
+        "the talk too — no rush."
+    ),
+    18: (  # Slide 19 — Questions
+        "Digital twins already have the data and models. Agentic AI gives "
+        "them the ability to act on it. That's it. That's the whole idea. "
+        "One new layer.\n\n"
+        "Thank you. Come find me or scan the QR for my site.\n\n"
+        "[This slide stays up during Q&A — contact info and QR visible.]"
+    ),
+    19: (  # Slide 20 — Close
+        "[Click to this after Q&A wraps, as your final word.]\n\n"
+        "Thanks everyone."
+    ),
+}
+
+for idx, notes_text in speaker_notes.items():
+    if idx < len(prs.slides):
+        add_notes(prs.slides[idx], notes_text)
 
 
 # ═══════════════════════════════════════
