@@ -1,7 +1,7 @@
 # Speaker Script — The Next Layer for Digital Twins
 
 **Talk**: The Next Layer for Digital Twins: From Simulation to Autonomous Action
-**Speaker**: Anthony Poole · AI Engineer, Microsoft
+**Speaker**: Anthony Poole · Software Engineer, Microsoft
 **Stage**: Embedded Systems US · April 22 · 12:00–12:20
 **Venue**: Microelectronics US 2026 · Palmer Events Center, Austin TX
 
@@ -11,33 +11,39 @@
 
 *[Already up as you walk on]*
 
-> Hey everyone. I'm Anthony Poole, AI engineer at Microsoft. I actually started closer to your world than you'd think — I interned at AMD, did research in quantum photonics, wrote my thesis on digital twins. But then I crossed over to the AI side. And over the last year I've watched something reshape how my team thinks about every system we touch. When I looked back at what's happening with digital twins, I realized the same shift is heading this way. So I want to share what I've seen.
+> Hey everyone. I'm Anthony Poole, software engineer at Microsoft — I build AI systems. But I actually started a bit closer to y'all's world than you'd think — I interned at AMD, did research in photonics, wrote my thesis on digital twins, and I worked on embedded systems for autonomous vehicles. But then I crossed over to the big tech AI side. And over the last year I've watched something reshape how my team thinks about every system we touch. Now when I look back at what's happening with digital twins, I realize the same shift is heading this way. So I want to share with you guys not just what I've seen, but my vision for what you all will see.
 
 ---
 
-## Slide 2 — What Is a Digital Twin?
+## Slide 2 — Digital Twins (section title)
 
-> So let's make sure we're starting from the same place. A digital twin — at its core — is a virtual model that stays continuously synced with a physical system. Data flows in from sensors. Simulations flow back. Whether you've built one, you're evaluating one, or you just have a really good monitoring dashboard — the concept is the same. It's a mirror of something real.
-
----
-
-## Slide 3 — The Stakes
-
-> And the stakes for getting this right are not small. In automotive, unplanned downtime costs twenty-two thousand dollars a minute. Across semiconductors, energy, defense — the numbers are just as brutal. But here's the real problem: your systems are generating more data every hour than your teams can act on in a week. The mirror is getting sharper. The response time isn't.
+*[Click through quickly — this is a signpost, not a beat]*
 
 ---
 
-## Slide 4 — The Evolution
+## Slide 3 — What Is a Digital Twin?
 
-> Digital twins have been evolving for a while now. Gen one was static — here's what your system looks like. A 3D model, a schematic, a snapshot. Gen two was reactive — something went wrong, here's an alert. Gen three — where a lot of you probably are or are heading — is predictive. Something *will* go wrong. And that's genuinely powerful.
+> So let's make sure we're starting from the same place. A digital twin — at its core — is a virtual model that stays continuously synced with a physical system. Data flows in from sensors. Simulations flow back. Whether you've built one, you're evaluating one, or you just have a really good monitoring dashboard — the concept is all the same. It's a mirror of something real.
+
+---
+
+## Slide 4 — The Stakes
+
+> And the stakes for getting this right are not small. In the automotive industry, unplanned downtime costs twenty-two thousand dollars a minute. In semiconductor fabs it can hit five million dollars an hour. And at the electric grid level, U.S. power outages cost a hundred and twenty-one billion dollars last year alone. If you guys live here in Austin, I'm sure you're all too familiar with that one. But here's the real problem: these systems are generating more data every minute than teams can act on in a week. The mirror is getting sharper. The ability to respond isn't.
+
+---
+
+## Slide 5 — The Evolution
+
+> Digital twins have been evolving for a while now. Gen one was static — here's what a lot of systems look like. A 3D model, a schematic, a snapshot. Gen two was reactive — something went wrong, here's an alert. Gen three — where a lot of you probably are or are heading — is predictive. Something *will* go wrong. And that's incredibly powerful.
 
 > *[Pause, gesture to the Gen 4 ? box]*
 
-> But notice — every generation gets smarter about what's *happening*. None of them do anything *about* it. The human is still the one who gets the call.
+> But notice — every generation gets smarter about what's *happening*. None of them do anything *about* it. The human is still on their own when it comes to diagnosis of issues, performance improvements and validation.
 
 ---
 
-## Slide 5 — The Confession
+## Slide 6 — The Confession
 
 *[Let the text land for a beat]*
 
@@ -45,7 +51,7 @@
 
 ---
 
-## Slide 6 — 2:14 AM
+## Slide 7 — 2:14 AM
 
 *[Slow. Conversational. Like you're telling a friend.]*
 
@@ -53,7 +59,7 @@
 
 > *[Pause]*
 
-> You? You're asleep. The last time someone reviewed those logs — maybe two weeks ago. By the time you wake up, understand what happened, dig through maintenance history, track down the part — five, six hours have passed.
+> You? You're asleep. The last time someone manually reviewed those logs — maybe two months ago. By the time you wake up, understand what happened, dig through maintenance history, track down the part — five, six hours have passed.
 
 > *[Pause]*
 
@@ -61,45 +67,45 @@
 
 ---
 
-## Slide 7 — Agents
+## Slide 8 — Agents (section title)
 
 > That was digital twins. Now let's talk about agents.
 
-> I know. You've heard the word. It's been on every keynote slide, every vendor pitch, every LinkedIn post for the last year. And honestly? I was skeptical too. I work in AI — I see what's hype and what's real every day. But I've spent the last year building with these systems, and the results aren't hype. They're changing how my team solves problems, how we diagnose failures, how we make decisions. So — let me show you what an agent actually is.
+> I know. You've heard the word. It's been on all these keynote slides, vendor pitches, and certainly every LinkedIn post for the last year. And if I'm being honest? I was skeptical too. I work in AI — I see what's hype and what's real every day. But I've spent the last year building these systems, and they work — they aren't curing cancer, but they make engineering fundamentally different. They've changed how my team solves problems, how we diagnose failures, how we make decisions. And importantly, how we think and plan for the future. So — let me show you what an agent actually is.
 
 ---
 
-## Slide 8 — Four Capabilities
+## Slide 9 — Four Capabilities
 
-> Four things make an agent different from a model running inference. Autonomy — it operates within boundaries you define, without waiting for a prompt. Planning — it breaks complex problems into multi-step workflows. Tool use — it connects to real systems, APIs, databases. And reflection — it evaluates what it did and adjusts its approach.
+> Four things make an agent different from just the ChatGPT webpage that you're all familiar with. Autonomy — it operates within boundaries you define, without waiting for anyone to ask. Planning — it breaks complex problems into multi-step workflows. Tool use — it connects to real systems, APIs, databases. And reflection — it evaluates what it did and adjusts its approach.
 
-> That last one is the one people underestimate. An agent that can't reflect is just automation with extra steps.
+> That last one is the one people often underestimate. And this is where we see a significant amount of gains.
 
 ---
 
-## Slide 9 — Convergence
+## Slide 10 — Convergence
 
 > So now we have two circles. On one side, digital twins — the data, the models, the simulation. On the other, agentic AI — the reasoning, the planning, the action. And if you're looking at this thinking "why aren't these connected yet?" — that's exactly the right question.
 
 ---
 
-## Slide 10 — The Reveal
+## Slide 11 — The Reveal
 
 *[Let the slide breathe. A beat of silence before you speak.]*
 
-> The twin that thinks. That's the idea. A digital twin that doesn't just mirror a system — it reasons about it. It plans. It acts. Not replacing the engineer. Giving the engineer a partner that never sleeps and never loses context.
+> What if the twin could think? That's the idea. A digital twin that doesn't just mirror a system — it reasons about it. It plans. It acts. Not replacing the engineer. Giving the engineer a partner that never sleeps and never loses context. Think back to that engineer at 2 AM. Instead of having to open your laptop and dig through dashboards, logs, and databases — you might just get a report from the twin saying: here's what went wrong, here's your actual data, and here are three options to act on it. Paged to resolved in minutes, not hours. And maybe in the future the engineer might not have to be woken up at all...
 
 ---
 
-## Slide 11 — The Loop
+## Slide 12 — The Loop
 
-> So what does this actually look like in practice? It's a control loop — something every engineer in this room already thinks in. Perceive — the system ingests data from sensors, logs, models. Reason — it identifies what's happening and why. Plan — it builds a response. Act — it executes through connected systems. Reflect — it evaluates the outcome and feeds that back in.
+> So let's talk about what this actually looks like in practice. It's a control loop! Something every engineer in this room already thinks in. Perceive — the system ingests data from sensors, logs, models. Reason — it identifies what's happening and why. Plan — it builds a response. Act — it executes through connected systems. Reflect — it evaluates the outcome and feeds that back in.
 
-> This isn't theoretical. This is how the best agentic systems are working right now. Continuous, closed-loop, autonomous within boundaries.
+> This isn't me telling you what might work for y'all — this is how real-world agentic AI is running right now. It's continuous, closed-loop, autonomous within boundaries.
 
 ---
 
-## Slide 12 — Architecture
+## Slide 13 — Architecture
 
 > And architecturally, it's simpler than you'd think. You have the physical system at the bottom — your equipment, your sensors, your floor. In the middle, the digital twin — your models, your simulation, your data layer. And on top, a new cognitive layer — the reasoning, the orchestration, the decision-making.
 
@@ -109,41 +115,41 @@
 
 ---
 
-## Slide 13 — The Evidence
+## Slide 14 — The Evidence
 
-> Now — I wouldn't be up here telling you about something that only exists in a pitch deck. This is happening. IBM published a paper at AAAI 2025 — one of the top AI conferences — on agentic digital twins for shipping fleet management. LLM agents that autonomously plan, execute, and reflect. XMPro has an open-source multi-agent system in production right now for manufacturing — they're reporting thirty to forty percent reductions in unplanned downtime. And Nature Computational Science published a formal evolutionary framework for this field. It has its own taxonomy.
+> Now — I wouldn't be up here telling you about something that only exists in a pitch deck. I'm not a thought leader or visionary — I'm an engineer, just like y'all. This might not have hit industry yet, but it's coming. IBM published a paper at AAAI 2025 — one of the top AI conferences — on agentic digital twins for shipping fleet management. LLM agents that autonomously plan, execute, and reflect. XMPro has a multi-agent system in production right now for manufacturing — they're reporting potential thirty to forty percent reductions in unplanned downtime. And Nature Computational Science published a piece this year mapping the full evolution of digital twins — from reactive to agentic. Six capability levels: standalone, descriptive, diagnostic, predictive, prescriptive, autonomous. That's a real maturity model in a top journal. This field is getting its foundations.
 
 > This went from idea to research to production faster than most people realize.
 
 ---
 
-## Slide 14 — Multi-Agent
+## Slide 15 — Multi-Agent
 
 > And the architecture that's emerging isn't one giant AI doing everything. It's specialized agents working together. A monitor that detects anomalies. An analyst that finds root causes. A planner that schedules the response. They collaborate — and critically — they check each other's work. The agent that proposes is never the one that approves.
 
-> If that sounds like how a good engineering team works, that's not a coincidence.
+> If that sounds like how a good engineering team works — it is. And that's not a coincidence.
 
 ---
 
-## Slide 15 — Three Worlds, One Pattern
+## Slide 16 — Three Worlds, One Pattern
 
-> And here's what gets me excited. This isn't a solution for one industry. The same pattern — the same loop, the same architecture — applies everywhere. An edge AI device drifts from its training data? The twin diagnoses it and triggers a retrain. A robotic arm shows bearing wear? The twin predicts the failure and schedules maintenance before the line stops. An ADAS sensor suite gets conflicting data? The twin runs safety checks and adapts in real time.
+> And here's what gets me excited. This isn't a solution for one industry or one use case. The same pattern — the same loop, the same architecture — applies everywhere. An edge AI device drifts from its training data? The agentic twin diagnoses it and triggers a retrain. A robotic arm shows bearing wear? The agentic twin predicts the failure and schedules maintenance before anything happens. An ADAS sensor suite gets conflicting data? The agentic twin runs safety checks and adapts in real time.
 
-> Different worlds. Same idea. That's how you know it's not a gimmick.
-
----
-
-## Slide 16 — Challenges
-
-> Now — I'd be lying if I told you this was all figured out. It's not. When an agent makes a bad decision, who owns it? Can you trace why it made that call? These systems create attack surfaces we haven't fully mapped yet. And our governance frameworks? They were built for tools that wait for instructions, not tools that act on their own.
-
-> These are real problems. They're solvable problems. But if we pretend they don't exist, someone else will solve them for us — and we might not like their answers.
+> Different worlds. Same idea. That's how you know it's an engineering tool rather than a fragile gimmick.
 
 ---
 
-## Slide 17 — Demo CTA
+## Slide 17 — Challenges
 
-> So — I built something. I wanted to show this idea, not just talk about it. If you take out your phone and scan that QR code, you can talk to an agentic digital twin right now. There are three of them — an edge AI device, a robotic arm, and an ADAS sensor suite. Ask it what's wrong. Watch it reason. Tell it to fix something and see what it does.
+> Now — I'd be lying if I told you this was all figured out. It's not. When an agent makes a bad decision, who owns it? Can you trace why it made that call? These systems create attack surfaces we haven't fully mapped yet. And governance frameworks weren't built for tools that act on their own.
+
+> These are real problems. They aren't fatal, but they are critical. They're solvable. But this is the forefront — it's mixing engineering best practices and domain expertise to push the envelope and build better systems. It's happening right now in my world, and I believe it's coming to y'all's very soon.
+
+---
+
+## Slide 18 — Demo CTA
+
+> So — I built something. I wanted to show this idea, not just talk about it. If you take out your phone and scan that QR code, you can talk to an agentic digital twin right now. There are three of them — I wanted to build something for each of our audience types, so there's an edge AI device, a robotic arm, and an ADAS sensor suite. Ask it what's wrong. Inject some issues. Watch it reason. Tell it to fix something and see what it does.
 
 > *[Give them 10–15 seconds to scan]*
 
@@ -151,21 +157,33 @@
 
 ---
 
-## Slide 18 — Close
+## Slide 19 — Questions
 
-> Digital twins already have the data. Agentic AI gives them the ability to act on it. That's it. That's the whole idea. One new layer.
+> To put this simply: Digital twins already have the data and models. Agentic AI gives them the ability to act on it. That's it. That's the whole idea. One new layer.
 
 > *[Pause]*
 
-> Thank you. I'm Anthony Poole — I'd love to talk to anyone who's thinking about this. Come find me, or scan that code and we can connect.
+> Thank you for listening. I'm Anthony — I'd love to talk to anyone who's thinking about or interested in this. Come find me, or scan that code for my personal site and contact info. And if anyone has any questions, I'd love to take them.
+
+*[This slide stays up during Q&A — contact info and QR visible the whole time]*
+
+---
+
+## Slide 20 — Close
+
+*[Click to this after Q&A wraps, as your final word]*
+
+> Thanks everyone.
 
 ---
 
 ## Delivery Notes
 
-- **Pacing**: ~18 slides in 20 minutes. You have room. Don't rush the pauses.
-- **Slide 6 is the emotional peak of Part 1.** Slow down. Let silence do the work.
-- **Slide 10 is the reveal.** Let the slide appear, wait a full beat, then speak.
-- **Slide 17**: Give them real time to scan. 10–15 seconds feels long on stage but it's fine.
+- **Pacing**: 20 slides in 20 minutes. You have room. Don't rush the pauses.
+- **Slide 7 is the emotional peak of Part 1.** Slow down. Let silence do the work.
+- **Slide 11 is the reveal.** Let the slide appear, wait a full beat, then speak.
+- **Slide 18**: Give them real time to scan. 10–15 seconds feels long on stage but it's fine.
+- **Slide 19**: This stays up during Q&A. No rush — people scan the QR while you talk.
+- **Slide 20**: Click to this as the last thing. Your thesis on screen as people leave.
 - **Posture**: Visionary guide. You're not lecturing — you're showing them something you found and inviting them to look at it with you.
 - **Karen Willcox card**: Hold in reserve. If the Q&A gets into "what qualifies you to talk about twins?" territory, that's when you play it.

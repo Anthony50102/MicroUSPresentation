@@ -23,8 +23,8 @@ BG1 = '#0F172A'
 BG2 = '#1E1E2E'
 WHITE = '#F5F5F0'
 CREAM = '#E8E4D9'
-DIM = '#6B7280'
-DARKER_DIM = '#4B5563'
+DIM = '#8B919C'
+DARKER_DIM = '#6B7280'
 ACCENT = '#D4D0C8'
 CARD_BG = '#151D30'
 CARD_BG2 = '#1A2236'
@@ -185,33 +185,43 @@ tb(s, Inches(1.5), Inches(2.2), Inches(10), Inches(2.0),
 tb(s, Inches(1.5), Inches(4.2), Inches(10), Inches(0.8),
    'From Simulation to Autonomous Action', 26, CREAM)
 rect(s, Inches(1.5), Inches(5.4), Inches(3), Inches(0.012), fill=ACCENT)
-tb(s, Inches(1.5), Inches(5.65), Inches(5), Inches(0.4),
-   'Anthony Poole  ·  AI Engineer, Microsoft', 18, DIM)
+tb(s, Inches(1.5), Inches(5.65), Inches(7), Inches(0.4),
+   'Anthony Poole  ·  Software Engineer, Microsoft', 18, DIM)
 tb(s, Inches(1.5), Inches(6.05), Inches(6), Inches(0.4),
    'Microelectronics US 2026  ·  Embedded Systems Stage  ·  April 22',
    14, DARKER_DIM)
 
 
 # ───────────────────────────────────
-# SLIDE 2 — What Is a Digital Twin? (bigger)
+# SLIDE 2 — Section Title: Digital Twins
+# ───────────────────────────────────
+s = prs.slides.add_slide(prs.slide_layouts[6])
+set_gradient_bg(s)
+tb(s, Inches(1.5), Inches(2.5), Inches(10), Inches(2.5),
+   'Digital Twins', 72, WHITE, bold=True)
+rect(s, Inches(1.5), Inches(4.3), Inches(3), Inches(0.012), fill=ACCENT)
+
+
+# ───────────────────────────────────
+# SLIDE 3 — What Is a Digital Twin? (bigger)
 # ───────────────────────────────────
 s = prs.slides.add_slide(prs.slide_layouts[6])
 set_gradient_bg(s)
 tb(s, Inches(1.2), Inches(0.5), Inches(5), Inches(0.5),
-   'The Foundation', 14, DARKER_DIM)
+   'The Foundation', 20, DIM)
 
 # Large Physical System box (left)
 rrect_text(s, Inches(0.8), Inches(1.8), Inches(4.8), Inches(4.0),
            'Physical\nSystem', 32, WHITE, fill=CARD_BG, line=ACCENT)
 
 # Large arrows — arrow character on its own line, label below
-tb(s, Inches(5.7), Inches(2.2), Inches(2.0), Inches(1.0),
-   '→', 48, CREAM, align=PP_ALIGN.CENTER)
-tb(s, Inches(5.7), Inches(3.0), Inches(2.0), Inches(0.5),
+tb(s, Inches(5.7), Inches(2.0), Inches(2.0), Inches(1.2),
+   '→', 72, CREAM, align=PP_ALIGN.CENTER)
+tb(s, Inches(5.7), Inches(2.9), Inches(2.0), Inches(0.5),
    'Sensors & Data', 16, DIM, align=PP_ALIGN.CENTER)
-tb(s, Inches(5.7), Inches(4.0), Inches(2.0), Inches(1.0),
-   '←', 48, CREAM, align=PP_ALIGN.CENTER)
-tb(s, Inches(5.7), Inches(4.8), Inches(2.0), Inches(0.5),
+tb(s, Inches(5.7), Inches(3.8), Inches(2.0), Inches(1.2),
+   '←', 72, CREAM, align=PP_ALIGN.CENTER)
+tb(s, Inches(5.7), Inches(4.7), Inches(2.0), Inches(0.5),
    'Simulation', 16, DIM, align=PP_ALIGN.CENTER)
 
 # Large Digital Twin box (right)
@@ -224,29 +234,33 @@ tb(s, Inches(1.2), Inches(6.2), Inches(11), Inches(0.8),
 
 
 # ───────────────────────────────────
-# SLIDE 4 — The Stakes (multi-industry)
+# SLIDE 4 — The Stakes (vertical stack with accent lines)
 # ───────────────────────────────────
 s = prs.slides.add_slide(prs.slide_layouts[6])
 set_gradient_bg(s)
 
-# Multiple industry metrics across the top
 metrics = [
-    ('$22K / min', 'Automotive\ndowntime'),
-    ('$X / hour', 'Semiconductor\nfab downtime'),
-    ('$X / event', 'Energy grid\noutage cost'),
+    ('$22K / min', 'Automotive downtime'),
+    ('$5M / hour', 'Semiconductor fab downtime'),
+    ('$121B / year', 'U.S. grid outage costs'),
 ]
+row_h = 1.7
+# Center 3 rows vertically: total = 3*1.7 = 5.1, slide = 7.5, margin = (7.5-5.1)/2 = 1.2
+start_y = 1.2
 for i, (val, label) in enumerate(metrics):
-    x = Inches(1.2 + i * 4.0)
-    tb(s, x, Inches(1.3), Inches(3.5), Inches(1.0),
-       val, 48, WHITE, bold=True)
-    tb(s, x, Inches(2.4), Inches(3.5), Inches(1.0),
-       label, 16, DIM)
-
-rect(s, Inches(1.2), Inches(4.0), Inches(2), Inches(0.015), fill=ACCENT)
-
-tb(s, Inches(1.2), Inches(4.4), Inches(10.5), Inches(2.0),
-   'Your systems generate more data every hour\nthan your teams can act on in a week.',
-   30, CREAM, bold=True)
+    y = start_y + i * row_h
+    # Thin accent line above each row (skip first)
+    if i > 0:
+        line_y = y - 0.2
+        rect(s, Inches(1.5), Inches(line_y), Inches(10.3), Inches(0.02), fill=DARKER_DIM)
+    # Big number — left side
+    tb(s, Inches(1.5), Inches(y), Inches(7.5), Inches(1.2),
+       val, 60, WHITE, bold=True)
+    # Label — right aligned
+    tf = tb(s, Inches(8.5), Inches(y + 0.2), Inches(3.3), Inches(0.9),
+       label, 22, DIM)
+    for p in tf.text_frame.paragraphs:
+        p.alignment = PP_ALIGN.RIGHT
 
 
 # ───────────────────────────────────
@@ -255,7 +269,7 @@ tb(s, Inches(1.2), Inches(4.4), Inches(10.5), Inches(2.0),
 s = prs.slides.add_slide(prs.slide_layouts[6])
 set_gradient_bg(s)
 tb(s, Inches(1.2), Inches(0.5), Inches(5), Inches(0.5),
-   'The Evolution', 14, DARKER_DIM)
+   'The Evolution', 20, DIM)
 
 gens = [
     ('Gen 1', 'Static', '"Here\'s what\nit looks like"'),
@@ -313,8 +327,7 @@ s = prs.slides.add_slide(prs.slide_layouts[6])
 set_gradient_bg(s)
 tb(s, Inches(1.5), Inches(2.5), Inches(10), Inches(1.5),
    'Agents', 72, WHITE, bold=True)
-tb(s, Inches(1.5), Inches(4.0), Inches(8), Inches(0.8),
-   'Autonomous AI systems that can reason, plan, and act.', 24, CREAM)
+rect(s, Inches(1.5), Inches(4.3), Inches(3), Inches(0.012), fill=ACCENT)
 
 
 # ───────────────────────────────────
@@ -323,7 +336,7 @@ tb(s, Inches(1.5), Inches(4.0), Inches(8), Inches(0.8),
 s = prs.slides.add_slide(prs.slide_layouts[6])
 set_gradient_bg(s)
 tb(s, Inches(1.2), Inches(0.5), Inches(5), Inches(0.5),
-   'What Makes an Agent', 14, DARKER_DIM)
+   'What Makes an Agent', 20, DIM)
 
 caps = [
     ('Autonomy', 'Acts within defined\nboundaries without\nprompting'),
@@ -355,7 +368,7 @@ oval(s, Inches(1.8), Inches(1.2), Inches(5.5), Inches(5.5),
 tb(s, Inches(2.3), Inches(3.2), Inches(3.5), Inches(1.0),
    'Digital\nTwins', 30, WHITE, bold=True)
 tb(s, Inches(2.3), Inches(4.5), Inches(3.2), Inches(1.0),
-   'The data.\nThe models.\nThe simulation.', 16, DIM)
+   'The data\nThe models\nThe simulation', 16, DIM)
 
 # Right circle: Agentic AI
 oval(s, Inches(6.0), Inches(1.2), Inches(5.5), Inches(5.5),
@@ -363,7 +376,7 @@ oval(s, Inches(6.0), Inches(1.2), Inches(5.5), Inches(5.5),
 tb(s, Inches(7.8), Inches(3.2), Inches(3.5), Inches(1.0),
    'Agentic\nAI', 30, WHITE, bold=True)
 tb(s, Inches(7.8), Inches(4.5), Inches(3.2), Inches(1.0),
-   'The reasoning.\nThe planning.\nThe action.', 16, DIM)
+   'The reasoning\nThe planning\nThe action', 16, DIM)
 
 # Clear ? in the visible intersection zone
 tb(s, Inches(5.5), Inches(3.3), Inches(2.3), Inches(1.5),
@@ -377,7 +390,7 @@ s = prs.slides.add_slide(prs.slide_layouts[6])
 set_gradient_bg(s)
 
 tb(s, Inches(0), Inches(2.5), Inches(13.333), Inches(2.5),
-   'The twin that thinks.', 56, WHITE, bold=True, align=PP_ALIGN.CENTER)
+   'What if the twin could think?', 56, WHITE, bold=True, align=PP_ALIGN.CENTER)
 
 
 # ───────────────────────────────────
@@ -386,7 +399,7 @@ tb(s, Inches(0), Inches(2.5), Inches(13.333), Inches(2.5),
 s = prs.slides.add_slide(prs.slide_layouts[6])
 set_gradient_bg(s)
 tb(s, Inches(1.2), Inches(0.5), Inches(5), Inches(0.5),
-   'The Agentic Control Loop', 14, DARKER_DIM)
+   'The Agentic Control Loop', 20, DIM)
 
 # Horizontal control loop — more familiar to engineers
 # Perceive → Reason → Plan → Act → Reflect (with feedback arrow back)
@@ -464,7 +477,7 @@ for i, (label, name, line_c, text_c) in enumerate(layers):
 s = prs.slides.add_slide(prs.slide_layouts[6])
 set_gradient_bg(s)
 tb(s, Inches(1.2), Inches(0.5), Inches(5), Inches(0.5),
-   'The Evidence', 14, DARKER_DIM)
+   'The Evidence', 20, DIM)
 
 evidence = [
     ('IBM — AAAI 2025',
@@ -473,11 +486,11 @@ evidence = [
      'autonomously plan, execute, reflect.'),
     ('XMPro MAGS',
      'Production multi-agent system for manufacturing.\n'
-     '30–40% reduction in unplanned downtime.\n'
-     'Open source.'),
-    ('Nature Computational Science',
-     'Published a formal evolutionary framework.\n'
-     'This field has its own taxonomy now.'),
+     'Potential 30–40% reduction in unplanned downtime.'),
+    ('Nature Computational Science (2026)',
+     'Mapped Digital Twin evolution from reactive to agentic,\n'
+     'naming six capability levels: Standalone · Descriptive ·\n'
+     'Diagnostic · Predictive · Prescriptive · Autonomous'),
 ]
 for i, (title, desc) in enumerate(evidence):
     y = Inches(1.4 + i * 1.9)
@@ -492,7 +505,7 @@ for i, (title, desc) in enumerate(evidence):
 s = prs.slides.add_slide(prs.slide_layouts[6])
 set_gradient_bg(s)
 tb(s, Inches(1.2), Inches(0.5), Inches(8), Inches(0.5),
-   'Multi-Agent Systems', 14, DARKER_DIM)
+   'Multi-Agent Systems', 20, DIM)
 
 # Three agents — simpler, just cards with role name
 agents = [
@@ -527,7 +540,7 @@ tb(s, Inches(1.2), Inches(5.6), Inches(11), Inches(1.0),
 s = prs.slides.add_slide(prs.slide_layouts[6])
 set_gradient_bg(s)
 tb(s, Inches(1.2), Inches(0.5), Inches(8), Inches(0.5),
-   'One Pattern, Three Worlds', 14, DARKER_DIM)
+   'One Pattern, Every System', 20, DIM)
 
 domains = [
     ('Edge AI Device', 'Model drift\n→ Diagnose\n→ Retrain'),
@@ -555,7 +568,7 @@ tb(s, Inches(1.0), Inches(5.8), Inches(11), Inches(1.0),
 s = prs.slides.add_slide(prs.slide_layouts[6])
 set_gradient_bg(s)
 tb(s, Inches(1.2), Inches(0.5), Inches(5), Inches(0.5),
-   'Let\'s Be Honest', 14, DARKER_DIM)
+   'Let\'s Be Honest', 20, DIM)
 
 challenges = [
     ('Accountability', 'When the agent decides wrong, who owns it?'),
@@ -594,39 +607,54 @@ for i, name in enumerate(['Edge AI', 'Robotic Arm', 'ADAS']):
               name, 14, CREAM, fill=CARD_BG, line=DARKER_DIM, bold=False)
 
 tb(s, Inches(0), Inches(6.95), Inches(13.333), Inches(0.4),
-   'tonypdemo.it.com', 14, DIM, align=PP_ALIGN.CENTER)
+   'tonypdemo.it.com', 18, DIM, align=PP_ALIGN.CENTER)
 
 
 # ───────────────────────────────────
-# SLIDE 18 — Close (with takeaway folded in)
+# SLIDE 19 — Questions + Contact
 # ───────────────────────────────────
 s = prs.slides.add_slide(prs.slide_layouts[6])
 set_gradient_bg(s)
 
-tb(s, Inches(1.5), Inches(1.5), Inches(10), Inches(1.5),
-   'Digital twins already have the data.\nAgentic AI gives them the ability to act on it.',
-   28, CREAM, italic=True)
+tb(s, Inches(1.5), Inches(1.2), Inches(10), Inches(1.2),
+   'Questions?', 52, WHITE, bold=True)
 
-rect(s, Inches(1.5), Inches(3.5), Inches(2.5), Inches(0.012), fill=ACCENT)
+rect(s, Inches(1.5), Inches(2.8), Inches(2.5), Inches(0.012), fill=ACCENT)
 
-tb(s, Inches(1.5), Inches(4.0), Inches(6), Inches(1.0),
-   'Anthony Poole', 44, WHITE, bold=True)
-tb(s, Inches(1.5), Inches(4.9), Inches(6), Inches(0.6),
-   'AI Engineer, Microsoft', 24, CREAM)
-tb(s, Inches(1.5), Inches(5.7), Inches(6), Inches(0.5),
-   'anthony50102.github.io  ·  linkedin.com/in/anthony-poole-079548206', 18, DIM)
-tb(s, Inches(1.5), Inches(6.5), Inches(6), Inches(0.5),
-   'Thank you.', 20, CREAM)
+tb(s, Inches(1.5), Inches(3.3), Inches(6), Inches(1.0),
+   'Anthony Poole', 36, WHITE, bold=True)
+tb(s, Inches(1.5), Inches(4.1), Inches(6), Inches(0.6),
+   'Software Engineer, Microsoft', 22, CREAM)
+tb(s, Inches(1.5), Inches(4.8), Inches(10), Inches(0.5),
+   'anthony50102.github.io', 20, DIM)
+tb(s, Inches(1.5), Inches(5.3), Inches(10), Inches(0.5),
+   'linkedin.com/in/anthony-poole-079548206', 20, DIM)
 
 # Personal site QR code (right side)
 qr_personal = os.path.join(SCRIPT_DIR, 'qr-personal.png')
 if os.path.exists(qr_personal):
-    s.shapes.add_picture(qr_personal, Inches(9.7), Inches(4.0), Inches(2.4), Inches(2.4))
-    tb(s, Inches(9.5), Inches(6.45), Inches(2.8), Inches(0.4),
-       'anthony50102.github.io', 12, DIM, align=PP_ALIGN.CENTER)
+    s.shapes.add_picture(qr_personal, Inches(9.2), Inches(2.8), Inches(3.2), Inches(3.2))
+    tb(s, Inches(9.0), Inches(6.05), Inches(3.6), Inches(0.4),
+       'anthony50102.github.io', 16, DIM, align=PP_ALIGN.CENTER)
 else:
-    rrect_text(s, Inches(9.5), Inches(4.0), Inches(2.8), Inches(2.5),
+    rrect_text(s, Inches(9.5), Inches(3.3), Inches(2.8), Inches(2.5),
               '[ QR Code ]\nanthonypoole.dev', 14, DIM, fill=CARD_BG, line=DARKER_DIM, bold=False)
+
+
+# ───────────────────────────────────
+# SLIDE 20 — Close (final takeaway)
+# ───────────────────────────────────
+s = prs.slides.add_slide(prs.slide_layouts[6])
+set_gradient_bg(s)
+
+tb(s, Inches(1.5), Inches(2.5), Inches(10), Inches(2.5),
+   'Digital twins give us the body.\nIt\'s time to consider the mind.',
+   32, CREAM, italic=True)
+
+rect(s, Inches(1.5), Inches(5.3), Inches(2.5), Inches(0.012), fill=ACCENT)
+
+tb(s, Inches(1.5), Inches(5.6), Inches(6), Inches(0.5),
+   'Thank you.', 22, CREAM)
 
 
 # ═══════════════════════════════════════
