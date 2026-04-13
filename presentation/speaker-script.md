@@ -23,7 +23,7 @@
 
 ## Slide 3 — What Is a Digital Twin?
 
-> So let's make sure we're starting from the same place. A digital twin — at its core — is a virtual model that stays continuously synced with a physical system. Data flows in from sensors. Simulations flow back. Whether you've built one, you're evaluating one, or you just have a really good monitoring dashboard — the concept is all the same. It's a mirror of something real.
+> So let's make sure we're starting from the same place. A digital twin — at its core — is a virtual model that stays continuously synced with a physical system. Data flows in from sensors. Simulations flow back. The idea goes back further than most people realize — all the way to NASA, 1970, Apollo 13. A mirror of something real, used to make life-or-death decisions. We've come a long way since then, but the core concept? Exactly the same.
 
 ---
 
@@ -35,11 +35,23 @@
 
 ## Slide 5 — The Evolution
 
-> Digital twins have been evolving for a while now. Gen one was static — here's what a lot of systems look like. A 3D model, a schematic, a snapshot. Gen two was reactive — something went wrong, here's an alert. Gen three — where a lot of you probably are or are heading — is predictive. Something *will* go wrong. And that's incredibly powerful.
+> Let me walk you through this with one example — NASA — because it maps perfectly.
+
+> *[BUILD — Gen 1 appears]*
+
+> Gen one: static. Apollo 13, 1970. Engineers in Houston had a physical replica of the spacecraft on the ground. When the oxygen tank exploded, they ran scenarios on that replica by hand — swapping components, testing procedures — to figure out how to bring the crew home. That was the first digital twin. Except it wasn't digital at all. It was a physical mirror of something real, and engineers had to manually work through every possibility.
+
+> *[BUILD — Gen 2 appears]*
+
+> Gen two: reactive. Fast forward to the Space Shuttle era. Now NASA has sensor telemetry streaming down in real time. The twin is digital — software models connected to live data. When a thermal tile shows anomalous readings, the system flags it. Something went wrong, here's an alert. That's a massive leap from Apollo — but the system still just tells you there's a problem. A human still has to figure out what to do about it.
+
+> *[BUILD — Gen 3 appears]*
+
+> Gen three: predictive. This is where NASA is today with the ISS and Artemis. Machine learning models trained on decades of operational data. The twin doesn't wait for something to break — it watches trends, compares against historical patterns, and tells you: this component will likely fail in the next seventy-two hours. That's incredibly powerful. Most of you are here or heading here.
 
 > *[Pause, gesture to the Gen 4 ? box]*
 
-> But notice — every generation gets smarter about what's *happening*. None of them do anything *about* it. The human is still on their own when it comes to diagnosis of issues, performance improvements and validation.
+> But notice the pattern. Each generation gets smarter about what's *happening*. None of them do anything *about* it. Apollo — engineers had to solve it themselves. Shuttle — engineers got an alert and had to solve it themselves. ISS — engineers get an early warning and *still* have to solve it themselves. The human is always the one who diagnoses, decides, and acts.
 
 ---
 
@@ -63,7 +75,9 @@
 
 > *[Pause]*
 
-> The system detected it in seconds. It took us the better part of a shift. Not because anyone failed. Because detection and action are two completely different problems. And right now, we've only solved one of them.
+> The system detected it in seconds. The response took the better part of a shift. Now imagine a different version of that story. Same drift. Same two fourteen AM. But this time, the system doesn't just detect it — it diagnoses the cause, pulls historical patterns, identifies the failing component, reroutes production around it, and schedules the replacement. By the time you wake up, it's already handled. You're reviewing the outcome, not triaging the problem.
+
+> That's the gap we're going to close today.
 
 ---
 
@@ -93,15 +107,15 @@
 
 *[Let the slide breathe. A beat of silence before you speak.]*
 
-> What if the twin could think? That's the idea. A digital twin that doesn't just mirror a system — it reasons about it. It plans. It acts. Not replacing the engineer. Giving the engineer a partner that never sleeps and never loses context. Think back to that engineer at 2 AM. Instead of having to open your laptop and dig through dashboards, logs, and databases — you might just get a report from the twin saying: here's what went wrong, here's your actual data, and here are three options to act on it. Paged to resolved in minutes, not hours. And maybe in the future the engineer might not have to be woken up at all...
+> What if the twin could think? That's the idea. A digital twin that doesn't just mirror a system — it reasons about it. It plans. And then actually executes. Not replacing the engineer. Giving the engineer a partner that never sleeps, never loses context, and doesn't wait for permission to solve problems it already understands. Think back to that engineer at 2 AM. The twin detects the thermal anomaly, traces it to a degrading component, reroutes production, and schedules the fix — all autonomously. The engineer wakes up to a resolution, not an alarm. And maybe in the future the engineer doesn't have to be woken up at all.
 
 ---
 
 ## Slide 12 — The Loop
 
-> So let's talk about what this actually looks like in practice. It's a control loop! Something every engineer in this room already thinks in. Perceive — the system ingests data from sensors, logs, models. Reason — it identifies what's happening and why. Plan — it builds a response. Act — it executes through connected systems. Reflect — it evaluates the outcome and feeds that back in.
+> So let's talk about what this actually looks like in practice. It's a control loop! Something every engineer in this room already thinks in. Perceive — the system ingests data from sensors, logs, models. Reason — it identifies what's happening and why. Plan — it builds a response strategy. Act — and this is the key word — actually execute. Not recommend. Not alert. Execute. Reroute load. Push a patch. Shut down a line. Swap to a backup. Reflect — it evaluates the outcome and learns from it.
 
-> This isn't me telling you what might work for y'all — this is how real-world agentic AI is running right now. It's continuous, closed-loop, autonomous within boundaries.
+> Remember that engineer at 2 AM? An agentic twin wouldn't have just detected the drift. It would have diagnosed, acted, and resolved — end to end. The engineer wakes up to a resolution report, not an alarm.
 
 ---
 
@@ -117,7 +131,7 @@
 
 ## Slide 14 — The Evidence
 
-> Now — I wouldn't be up here telling you about something that only exists in a pitch deck. I'm not a thought leader or visionary — I'm an engineer, just like y'all. This might not have hit industry yet, but it's coming. IBM published a paper at AAAI 2025 — one of the top AI conferences — on agentic digital twins for shipping fleet management. LLM agents that autonomously plan, execute, and reflect. XMPro has a multi-agent system in production right now for manufacturing — they're reporting potential thirty to forty percent reductions in unplanned downtime. And Nature Computational Science published a piece this year mapping the full evolution of digital twins — from reactive to agentic. Six capability levels: standalone, descriptive, diagnostic, predictive, prescriptive, autonomous. That's a real maturity model in a top journal. This field is getting its foundations.
+> Now — I wouldn't be up here telling you about something that only exists in a pitch deck. I'm not a thought leader or visionary — I'm an engineer, just like y'all. This is early, but the foundations are real. IBM published a paper at AAAI 2025 — one of the top AI conferences — on agentic digital twins for shipping fleet management. LLM agents that autonomously plan, execute, and reflect. Not copilots. Full agents. XMPro has a multi-agent system in production right now for manufacturing — they report that they can achieve thirty to forty percent reductions in unplanned downtime. And Nature Computational Science published a piece this year mapping the full evolution of digital twins — from reactive to agentic. Six capability levels: standalone, descriptive, diagnostic, predictive, prescriptive, autonomous. That's a real maturity model in a top journal.
 
 > This went from idea to research to production faster than most people realize.
 
@@ -125,9 +139,9 @@
 
 ## Slide 15 — Multi-Agent
 
-> And the architecture that's emerging isn't one giant AI doing everything. It's specialized agents working together. A monitor that detects anomalies. An analyst that finds root causes. A planner that schedules the response. They collaborate — and critically — they check each other's work. The agent that proposes is never the one that approves.
+> And the architecture that's emerging isn't one giant AI doing everything. It's specialized agents working together. A monitor that detects anomalies. An analyst that finds root causes. A planner that schedules and executes the response. They collaborate — and critically — they check each other's work. The agent that proposes is never the one that approves. That's not just good AI design — that's how you build trust in autonomous systems.
 
-> If that sounds like how a good engineering team works — it is. And that's not a coincidence.
+> If that sounds like how a good engineering team works — it should. That's the whole point.
 
 ---
 
@@ -144,6 +158,8 @@
 > Now — I'd be lying if I told you this was all figured out. It's not. When an agent makes a bad decision, who owns it? Can you trace why it made that call? These systems create attack surfaces we haven't fully mapped yet. And governance frameworks weren't built for tools that act on their own.
 
 > These are real problems. They aren't fatal, but they are critical. They're solvable. But this is the forefront — it's mixing engineering best practices and domain expertise to push the envelope and build better systems. It's happening right now in my world, and I believe it's coming to y'all's very soon.
+
+> *[TODO — IF EXTRA TIME: Add a beat here on the path forward — "Human-in-the-loop for high-stakes decisions. Graduated autonomy — start with recommendations, earn trust, expand scope. Audit trails for every action the agent takes." This gives engineers a mental framework for how these concerns get addressed, rather than leaving them with just the questions. Only include if pacing allows — the concerns themselves are sufficient if tight on time.]*
 
 ---
 
